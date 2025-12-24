@@ -1,0 +1,547 @@
+import { Game, Team, WeatherInfo, Bookmaker, BettingOdds, MatchupStats, StatLeader, TeamBoxscore, BettingResult } from "@/types/nfl";
+import { TEAM_BRANDING } from "@/lib/team-branding";
+import { STADIUM_REGISTRY } from "@/lib/stadiums";
+import { weatherCache } from "@/lib/weatherCache";
+import { storage } from "@/lib/storage";
+
+// --- Local Storage Snapshot Logic ---
+const getPreviousOdds = (): Record<string, Bookmaker[]> => {
+  if (typeof window === "undefined") return {};
+  const stored = localStorage.getItem("odds_snapshot");
+  return stored ? JSON.parse(stored) : {};
+};
+
+const storeOdds = (games: Game[]) => {
+  if (typeof window === "undefined") return;
+  const snapshot = games.reduce((acc, game) => {
+    acc[game.id] = game.bookmakers;
+    return acc;
+  }, {} as Record<string, Bookmaker[]>);
+  localStorage.setItem("odds_snapshot", JSON.stringify(snapshot));
+};
+
+const calculateMovement = (current: number, previous: number): 'up' | 'down' | 'stable' => {
+  if (current > previous) return 'up';
+  if (current < previous) return 'down';
+  return 'stable';
+};
+
+
+// Helper function to map OpenWeather ID to our condition strings
+const mapWeatherCodeToCondition = (id: number): string => {
+  if (id === 800) return "Sunny";
+  if (id >= 801 && id <= 804) return "Cloudy";
+  if ((id >= 500 && id <= 531) || (id >= 300 && id <= 321)) return "Rain";
+  if (id >= 600 && id <= 622) return "Snow";
+  return "Cloudy"; // Default case
+};
+
+// Helper to normalize team names for matching (e.g. "Washington Commanders" vs "Washington")
+const normalizeTeamName = (name: string): string => {
+  return name.toLowerCase()
+    .replace(/^(the\s+)/, '') // Remove leading "The"
+    .replace(/\s+/g, ' ')     // Collapse whitespace
+    .trim();
+};
+
+export async function getGamesByWeek(
+  week: number = 17, seasonType: number = 2
+): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
+  // Use 2025 for weeks 1-18 (Regular Season). 
+  const year = 2025;
+  const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${year}&seasontype=${seasonType}&week=${week}`;
+  const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
+
+  try {
+    if (
+      !process.env.NEXT_PUBLIC_ODDS_API_KEY ||
+      process.env.NEXT_PUBLIC_ODDS_API_KEY === "YOUR_API_KEY" ||
+      !process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY ||
+      process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY === "YOUR_API_KEY"
+    ) {
+      console.warn("API keys not found. Using mock data.");
+      return { games: getMockGames(week), isSnapshot: false, lastUpdated: Date.now() };
+    }
+
+    const [espnData, oddsData] = await Promise.all([
+      fetch(espnUrl).then(res => res.ok ? res.json() : null).catch(() => null),
+      fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => [])
+    ]);
+
+    if (!espnData) {
+        const snapshot = storage.getSnapshot(week);
+        if (snapshot) {
+            return { games: snapshot.data, lastUpdated: snapshot.lastUpdated, isSnapshot: true };
+        }
+        throw new Error("Failed to fetch ESPN data and no snapshot available");
+    }
+
+    const previousOdds = getPreviousOdds();
+
+    const gamesPromises = espnData.events.map(async (event: any) => {
+      const competition = event.competitions[0];
+      const statusType = event.status.type.name; 
+      const statusState = event.status.type.state; 
+      const isFinal = statusState === 'post' || statusType === 'STATUS_FINAL';
+      
+      const venue = competition.venue;
+      const homeComp = competition.competitors.find((c: any) => c.homeAway === "home");
+      const awayComp = competition.competitors.find((c: any) => c.homeAway === "away");
+
+      const getRecord = (comp: any) => {
+        if (!comp.records) return "0-0";
+        const totalRecord = comp.records.find((r: any) => r.type === 'total');
+        return (totalRecord || comp.records[0])?.summary ?? "0-0";
+      };
+
+      const homeTeam: Team = {
+        id: homeComp.team.id,
+        name: homeComp.team.displayName,
+        abbreviation: homeComp.team.abbreviation,
+        record: getRecord(homeComp),
+        logoUrl: homeComp.team.logo,
+        color: TEAM_BRANDING[homeComp.team.abbreviation as keyof typeof TEAM_BRANDING]?.primary || "#000000",
+        clinchedPlayoffs: homeComp.playoffStatus?.clinched,
+      };
+
+      const awayTeam: Team = {
+        id: awayComp.team.id,
+        name: awayComp.team.displayName,
+        abbreviation: awayComp.team.abbreviation,
+        record: getRecord(awayComp),
+        logoUrl: awayComp.team.logo,
+        color: TEAM_BRANDING[awayComp.team.abbreviation as keyof typeof TEAM_BRANDING]?.primary || "#000000",
+        clinchedPlayoffs: awayComp.playoffStatus?.clinched,
+      };
+
+      const normalizedHome = normalizeTeamName(homeTeam.name);
+      const normalizedAway = normalizeTeamName(awayTeam.name);
+
+      const gameOdds = Array.isArray(oddsData)
+        ? oddsData.find((o: any) => {
+            const oddsHome = normalizeTeamName(o.home_team);
+            const oddsAway = normalizeTeamName(o.away_team);
+            return (oddsHome.includes(normalizedHome) || normalizedHome.includes(oddsHome)) &&
+                   (oddsAway.includes(normalizedAway) || normalizedAway.includes(oddsAway));
+          })
+        : null;
+
+      const prevGameBookmakers = previousOdds[event.id] || [];
+
+      const bookmakers: Bookmaker[] =
+        gameOdds?.bookmakers
+          .filter((bookmaker: any) => ["draftkings", "fanduel", "betmgm"].includes(bookmaker.key))
+          .map((bookmaker: any) => {
+            const spreadMarket = bookmaker.markets.find((m: any) => m.key === "spreads");
+            const totalMarket = bookmaker.markets.find((m: any) => m.key === "totals");
+            const moneylineMarket = bookmaker.markets.find((m: any) => m.key === "h2h");
+
+            const currentSpread = spreadMarket?.outcomes.find((o: any) => o.name === homeTeam.name)?.point ?? 0;
+            const prevBookmaker = prevGameBookmakers.find(b => b.key === bookmaker.key);
+            const prevSpread = prevBookmaker?.odds.spread ?? currentSpread;
+
+            const odds: BettingOdds = {
+              spread: currentSpread,
+              total: totalMarket?.outcomes[0]?.point ?? 0,
+              moneylineHome: moneylineMarket?.outcomes.find((o: any) => o.name === homeTeam.name)?.price ?? 0,
+              moneylineAway: moneylineMarket?.outcomes.find((o: any) => o.name === awayTeam.name)?.price ?? 0,
+              movement: calculateMovement(currentSpread, prevSpread)
+            };
+
+            return { key: bookmaker.key, title: bookmaker.title, lastUpdate: bookmaker.last_update, odds };
+          }) ?? [];
+
+      let weather: WeatherInfo = { temperature: 0, condition: "N/A", windSpeed: 0, precipChance: 0 };
+      let lat, lon, isIndoor = false;
+
+      if (STADIUM_REGISTRY[venue.fullName]) {
+        const registry = STADIUM_REGISTRY[venue.fullName];
+        isIndoor = registry.indoor;
+        lat = registry.lat;
+        lon = registry.lon;
+      } else if (venue.coordinates) {
+        lat = venue.coordinates.latitude;
+        lon = venue.coordinates.longitude;
+        isIndoor = venue.indoor;
+      }
+
+      if (lat && lon && !isFinal) {
+        const fetchedWeather = await getWeather(lat.toString(), lon.toString(), event.date);
+        weather = isIndoor ? { ...fetchedWeather, condition: "Dome" } : fetchedWeather;
+      }
+
+      const homeScore = parseInt(homeComp.score) || 0;
+      const awayScore = parseInt(awayComp.score) || 0;
+
+      let bettingResult: BettingResult | undefined;
+      if (isFinal && bookmakers.length > 0) {
+          const mainBookmaker = bookmakers[0];
+          const spread = mainBookmaker.odds.spread;
+          const total = mainBookmaker.odds.total;
+          
+          let spreadCoveredBy = 'PUSH';
+          let spreadResult = '';
+
+          if (homeScore + spread > awayScore) {
+              spreadCoveredBy = homeTeam.abbreviation;
+              spreadResult = `Covered ${spread > 0 ? '+' : ''}${spread}`;
+          } else if (homeScore + spread < awayScore) {
+              spreadCoveredBy = awayTeam.abbreviation;
+              spreadResult = `Covered ${spread > 0 ? '-' : '+'}${Math.abs(spread)}`; 
+          } else {
+              spreadCoveredBy = 'PUSH';
+              spreadResult = `Push ${spread}`;
+          }
+
+          let totalResult: 'OVER' | 'UNDER' | 'PUSH' = 'PUSH';
+          if (homeScore + awayScore > total) totalResult = 'OVER';
+          else if (homeScore + awayScore < total) totalResult = 'UNDER';
+
+          bettingResult = { spreadCoveredBy, spreadResult, totalResult, closingTotal: total };
+      }
+      
+      const winnerId = isFinal ? (homeScore > awayScore ? homeTeam.id : (awayScore > homeScore ? awayTeam.id : undefined)) : undefined;
+
+      return {
+        id: event.id,
+        week: espnData.week.number,
+        date: event.date,
+        venue: venue.fullName,
+        venueLocation: `${venue.address.city}, ${venue.address.state}`,
+        homeTeam,
+        awayTeam,
+        bookmakers,
+        weather,
+        broadcast: competition.broadcasts?.[0]?.names?.[0] ?? competition.geoBroadcasts?.[0]?.media?.shortName ?? "",
+        isLive: statusState === 'in',
+        indoor: !!isIndoor,
+        status: statusState as 'pre' | 'in' | 'post',
+        homeScore,
+        awayScore,
+        winnerId,
+        bettingResult
+      };
+    });
+
+    const resolvedGames = await Promise.all(gamesPromises);
+    storeOdds(resolvedGames);
+    storage.saveSnapshot(week, resolvedGames);
+
+    return { games: resolvedGames, lastUpdated: Date.now(), isSnapshot: false };
+
+  } catch (error) {
+    console.warn("Error fetching live game data, checking snapshots:", error);
+    const snapshot = storage.getSnapshot(week);
+    if (snapshot) {
+        return { games: snapshot.data, lastUpdated: snapshot.lastUpdated, isSnapshot: true };
+    }
+    return { games: getMockGames(week), isSnapshot: false };
+  }
+}
+
+// Helper to determine if weather should be refetched based on game proximity
+const shouldRefetchWeather = (gameDate: string, lastFetchTime: number): boolean => {
+  const now = Date.now();
+  const kickoff = new Date(gameDate).getTime();
+  const diffHours = (kickoff - now) / (1000 * 60 * 60);
+  const dataAgeHours = (now - lastFetchTime) / (1000 * 60 * 60);
+
+  if (diffHours > 72) { // > 3 days
+    return dataAgeHours > 12;
+  } else if (diffHours > 24) { // 1-3 days
+    return dataAgeHours > 6;
+  } else { // < 24 hours
+    return dataAgeHours > 1;
+  }
+};
+
+export async function getWeather(
+  lat: string,
+  lon: string,
+  gameDate: string
+): Promise<WeatherInfo> {
+  const cacheKey = `weather_${lat}_${lon}`;
+  const cached = weatherCache.get(cacheKey); // Note: we should store the lastUpdated time in the cache as well
+  
+  // Checking proximity logic
+  if (cached && !shouldRefetchWeather(gameDate, cached.lastUpdated || 0)) {
+    return cached;
+  }
+
+  // Ensure imperial units are requested
+  const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}&units=imperial`;
+
+  try {
+    const response = await fetch(weatherUrl);
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn(`Weather throttled: Using stale data for ${lat},${lon}.`);
+      }
+      return cached || { temperature: 0, condition: "N/A", windSpeed: 0, precipChance: 0 };
+    }
+    const data = await response.json();
+
+    const weather = {
+      temperature: Math.round(data.main.temp),
+      condition: mapWeatherCodeToCondition(data.weather[0].id),
+      windSpeed: Math.round(data.wind.speed),
+      precipChance: 0, 
+      lastUpdated: Date.now() // Store timestamp for proximity check
+    };
+
+    weatherCache.set(cacheKey, weather);
+    return weather;
+  } catch (error) {
+    console.error(`Error fetching weather for lat/lon ${lat},${lon}:`, error);
+    return cached || { temperature: 0, condition: "N/A", windSpeed: 0, precipChance: 0 };
+  }
+}
+
+async function getGameSummary(gameId: string): Promise<MatchupStats | undefined> {
+  const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${gameId}`;
+  try {
+    const res = await fetch(summaryUrl);
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    
+    const leaders = data.leaders; 
+    if (!leaders || !Array.isArray(leaders)) return undefined;
+
+    const parseTeamLeaders = (teamData: any) => {
+        if (!teamData) return undefined;
+        
+        const passing = teamData.leaders?.find((l: any) => l.name === "passingYards");
+        const rushing = teamData.leaders?.find((l: any) => l.name === "rushingYards");
+        const receiving = teamData.leaders?.find((l: any) => l.name === "receivingYards");
+
+        const mapLeader = (catData: any, categoryName: string) => {
+             if (!catData || !catData.leaders || catData.leaders.length === 0) return undefined;
+             const leader = catData.leaders[0];
+             const athlete = leader.athlete;
+             const displayValue = leader.displayValue || "";
+
+             const parts = displayValue.split(/,\s+/).map((s: string) => s.trim());
+             const stats: { [key: string]: string } = {};
+
+             const findValue = (suffix: string) => {
+                const part = parts.find((p: string) => p.endsWith(suffix));
+                return part ? part.replace(suffix, "").trim() : "0";
+             };
+
+             if (leader.mainStat && leader.mainStat.label === "YDS") {
+                 stats["Yds"] = leader.mainStat.value;
+             } else {
+                 stats["Yds"] = findValue("YDS");
+             }
+             
+             stats["TD"] = findValue("TD");
+
+             if (categoryName === "Passing") {
+                 stats["INT"] = findValue("INT");
+             } else if (categoryName === "Rushing") {
+                 const carStr = findValue("CAR");
+                 let car = parseFloat(carStr.replace(/,/g, ''));
+                 let yds = parseFloat(stats["Yds"].toString().replace(/,/g, ''));
+                 stats["AVG"] = (car > 0 && !isNaN(yds)) ? (yds / car).toFixed(1) : "0.0";
+             } else if (categoryName === "Receiving") {
+                 stats["REC"] = findValue("REC");
+             }
+
+             return {
+                name: athlete.displayName,
+                value: leader.mainStat?.value || stats["Yds"], 
+                category: categoryName,
+                teamAbbreviation: teamData.team.abbreviation,
+                logoUrl: athlete.headshot?.href,
+                detailedStats: stats
+             };
+        };
+
+        return {
+            passingLeader: mapLeader(passing, "Passing"),
+            rushingLeader: mapLeader(rushing, "Rushing"),
+            receivingLeader: mapLeader(receiving, "Receiving"),
+        };
+    };
+
+    const parseBoxScore = (boxscoreData: any) => {
+        if (!boxscoreData || !boxscoreData.players) return undefined;
+
+        const parseCategory = (name: string, headers: string[]) => {
+            const categoryData = boxscoreData.players.find((p: any) => p.name === name);
+            if (!categoryData) return { headers, players: [], totals: [] };
+
+            const players = categoryData.athletes.map((athlete: any) => ({
+                name: athlete.athlete.displayName,
+                stats: athlete.stats
+            }));
+
+            const totals = categoryData.totals || headers.map(() => "");
+
+            return { headers, players, totals };
+        };
+
+        return {
+            passing: parseCategory("passing", ["C/ATT", "YDS", "AVG", "TD", "INT", "SACKS", "QBR", "RTG"]),
+            rushing: parseCategory("rushing", ["CAR", "YDS", "AVG", "TD", "LONG"]),
+            receiving: parseCategory("receiving", ["REC", "YDS", "AVG", "TD", "LONG", "TGTS"]),
+            fumbles: parseCategory("fumbles", ["FUM", "LOST", "REC"]),
+        };
+    };
+
+    const homeComp = data.header?.competitions?.[0]?.competitors?.find((c:any) => c.homeAway === 'home');
+    const awayComp = data.header?.competitions?.[0]?.competitors?.find((c:any) => c.homeAway === 'away');
+    
+    const homeBox = data.boxscore?.players?.find((p:any) => p.team.id === homeComp?.id);
+    const awayBox = data.boxscore?.players?.find((p:any) => p.team.id === awayComp?.id);
+
+    const homeTeamLeaders = leaders.find((l: any) => l.team.id === homeComp?.id);
+    const awayTeamLeaders = leaders.find((l: any) => l.team.id === awayComp?.id);
+
+    const homeStats = {
+        ...parseTeamLeaders(homeTeamLeaders),
+        boxscore: parseBoxScore(homeBox ? { players: homeBox.statistics } : undefined)
+    };
+    
+    const awayStats = {
+        ...parseTeamLeaders(awayTeamLeaders),
+        boxscore: parseBoxScore(awayBox ? { players: awayBox.statistics } : undefined)
+    };
+
+    const hasData = (s: any) => s && (s.passingLeader || s.rushingLeader || s.receivingLeader || s.boxscore);
+
+    if (!hasData(homeStats) && !hasData(awayStats)) return undefined;
+
+    return {
+        home: homeStats || {},
+        away: awayStats || {}
+    };
+
+  } catch (e) {
+    return undefined;
+  }
+}
+
+export async function getGameById(id: string): Promise<Game | undefined> {
+  const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+  
+  for (const week of weeks) {
+    const { games } = await getGamesByWeek(week);
+    const game = games.find((g) => g.id === id);
+    if (game) {
+      const summary = await getGameSummary(id);
+      if (summary) {
+        game.matchupStats = summary;
+      }
+      return game;
+    }
+  }
+  
+  return undefined;
+}
+
+export function getMockGames(week: number): Game[] {
+  return [
+    {
+      id: "401671640",
+      week: week,
+      date: new Date(Date.now() + 86400000).toISOString(),
+      venue: "Highmark Stadium",
+      venueLocation: "Orchard Park, NY",
+      homeTeam: {
+        id: "2",
+        name: "Buffalo Bills",
+        abbreviation: "BUF",
+        record: "10-6",
+        logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
+        clinchedPlayoffs: true,
+        color: "#00338D",
+      },
+      awayTeam: {
+        id: "20",
+        name: "New York Jets",
+        abbreviation: "NYJ",
+        record: "6-10",
+        logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+        clinchedPlayoffs: false,
+        color: "#125740",
+      },
+      bookmakers: [
+        {
+          key: "draftkings",
+          title: "DraftKings",
+          lastUpdate: new Date().toISOString(),
+          odds: {
+            spread: -5.5,
+            total: 44.5,
+            moneylineHome: -250,
+            moneylineAway: 205,
+            movement: "stable",
+          },
+        },
+      ],
+      weather: {
+        temperature: 28,
+        condition: "Snow",
+        windSpeed: 15,
+        precipChance: 60,
+      },
+      broadcast: "CBS",
+      isLive: false,
+      indoor: false,
+      status: 'pre',
+      homeScore: 0,
+      awayScore: 0,
+      matchupStats: {
+        home: {
+          passingLeader: { name: "J. Allen", value: "3200", category: "Passing", teamAbbreviation: "BUF", detailedStats: { "Yds": "3200", "TD": "28", "INT": "9" } },
+          rushingLeader: { name: "J. Cook", value: "950", category: "Rushing", teamAbbreviation: "BUF", detailedStats: { "Yds": "950", "TD": "4", "AVG": "4.9" } },
+          receivingLeader: { name: "S. Diggs", value: "1100", category: "Receiving", teamAbbreviation: "BUF", detailedStats: { "Yds": "1100", "TD": "8", "REC": "85" } },
+        },
+        away: {
+          passingLeader: { name: "A. Rodgers", value: "2800", category: "Passing", teamAbbreviation: "NYJ", detailedStats: { "Yds": "2800", "TD": "20", "INT": "6" } },
+          rushingLeader: { name: "B. Hall", value: "850", category: "Rushing", teamAbbreviation: "NYJ", detailedStats: { "Yds": "850", "TD": "5", "AVG": "4.5" } },
+          receivingLeader: { name: "G. Wilson", value: "900", category: "Receiving", teamAbbreviation: "NYJ", detailedStats: { "Yds": "900", "TD": "6", "REC": "70" } },
+        }
+      }
+    },
+    {
+      id: "401671641",
+      week: week,
+      date: new Date(Date.now() + 90000000).toISOString(),
+      venue: "Lambeau Field",
+      venueLocation: "Green Bay, WI",
+      homeTeam: {
+        id: "9",
+        name: "Green Bay Packers",
+        abbreviation: "GB",
+        record: "8-8",
+        logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+        clinchedPlayoffs: false,
+        color: "#183028",
+      },
+      awayTeam: {
+        id: "3",
+        name: "Chicago Bears",
+        abbreviation: "CHI",
+        record: "7-9",
+        logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
+        clinchedPlayoffs: false,
+        color: "#0B162A",
+      },
+      bookmakers: [],
+      weather: {
+        temperature: 15,
+        condition: "Cloudy",
+        windSpeed: 12,
+        precipChance: 10,
+      },
+      broadcast: "FOX",
+      isLive: false,
+      indoor: false,
+      status: 'pre',
+      homeScore: 0,
+      awayScore: 0,
+    },
+  ];
+}

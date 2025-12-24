@@ -1,0 +1,17 @@
+export const TEAM_BRANDING = {
+  "BUF": { primary: "#00338D", secondary: "#C60C30", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" },
+  "GB": { primary: "#183028", secondary: "#FFB81C", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png" },
+  "KC": { primary: "#E31837", secondary: "#FFB81C", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png" },
+  "SF": { primary: "#AA0000", secondary: "#B3995D", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png" },
+  "BAL": { primary: "#241773", secondary: "#9E7C0C", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png" },
+  "DAL": { primary: "#003594", secondary: "#869397", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png" },
+  "MIA": { primary: "#008E97", secondary: "#FC4C02", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png" },
+  "ATL": { primary: "#A71930", secondary: "#000000", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png" },
+  "NO": { primary: "#D3BC8D", secondary: "#000000", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/no.png" },
+  "PHI": { primary: "#004C54", secondary: "#A5ACAF", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png" },
+  "SEA": { primary: "#002244", secondary: "#69BE28", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png" },
+  "ARI": { primary: "#97233F", secondary: "#000000", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png" },
+  "LAC": { primary: "#0080C6", secondary: "#FFC20E", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png" },
+  "DEN": { primary: "#FB4F14", secondary: "#002244", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/den.png" },
+  "PIT": { primary: "#000000", secondary: "#FFB612", logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png" },
+};
