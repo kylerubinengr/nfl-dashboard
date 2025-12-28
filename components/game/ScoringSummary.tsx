@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Team, ScoringPlay, Linescore, Drive } from "@/types/nfl";
+import { Team, ScoringPlay, Linescore, Drive, PlayByPlay } from "@/types/nfl";
 import { SafeImage } from "../common/SafeImage";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ScoringSummaryProps {
     homeTeam: Team;
@@ -20,6 +21,83 @@ const getOrdinal = (n: number) => {
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+function DriveItem({ drive }: { drive: Drive }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="bg-white dark:bg-slate-900">
+            {/* Drive Header - Clickable */}
+            <div 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="sticky top-0 z-10 px-4 py-3 bg-slate-100/90 backdrop-blur-sm flex items-center justify-between border-b border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors dark:bg-slate-800/90 dark:border-slate-700 dark:hover:bg-slate-700/80"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white p-1 shadow-sm border border-slate-200 dark:bg-slate-700 dark:border-slate-600 flex items-center justify-center">
+                            <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={24} height={24} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-black uppercase text-slate-500 tracking-widest dark:text-slate-400">
+                                {drive.team.abbreviation} Drive
+                            </span>
+                            {drive.isScore && (
+                                <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
+                                    Score
+                                </span>
+                            )}
+                        </div>
+                        <p className={`text-sm font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            {drive.result}
+                        </p>
+                    </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                     <div className="text-right text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 leading-tight hidden sm:block">
+                        <div>{drive.playCount} plays, {drive.yards} yds</div>
+                        <div>{drive.timeElapsed} • {drive.startClock}</div>
+                    </div>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                </div>
+            </div>
+            
+            {/* Plays List - Conditional Render */}
+            {isExpanded && (
+                <div className="divide-y divide-slate-50 dark:divide-slate-800/50 animate-in slide-in-from-top-1 duration-200">
+                    {drive.plays.map((play) => (
+                        <div key={play.id} className="flex gap-4 p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/30">
+                            <div className="w-16 flex-shrink-0 flex flex-col items-center pt-0.5">
+                                <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 font-mono">{play.clock}</span>
+                                <span className="block text-[9px] text-slate-400 uppercase font-bold mt-0.5 dark:text-slate-500">
+                                    {play.down && play.distance ? `${getOrdinal(play.down)} & ${play.distance}` : ''}
+                                </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 tracking-wider dark:bg-slate-800 dark:text-slate-400">{play.type}</span>
+                                     {play.yardLine && (
+                                        <span className="text-[9px] text-slate-400 font-mono dark:text-slate-500">
+                                            {play.yardLine > 50 ? `OPP ${100 - play.yardLine}` : `OWN ${play.yardLine}`}
+                                        </span>
+                                     )}
+                                     {play.yardsGained !== undefined && play.yardsGained !== 0 && (
+                                         <span className={`text-[10px] font-black ml-auto ${play.yardsGained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                            {play.yardsGained > 0 ? '+' : ''}{play.yardsGained} yds
+                                         </span>
+                                     )}
+                                </div>
+                                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                                    {play.text}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function ScoringSummary({ 
     homeTeam, 
@@ -173,67 +251,7 @@ export function ScoringSummary({
                     ) : (
                         <div className="divide-y divide-slate-200 dark:divide-slate-800">
                             {drives.map((drive) => (
-                                <div key={drive.id} className="bg-white dark:bg-slate-900">
-                                    {/* Drive Header */}
-                                    <div className="sticky top-0 z-10 px-4 py-3 bg-slate-100/90 backdrop-blur-sm flex items-center justify-between border-b border-slate-200 dark:bg-slate-800/90 dark:border-slate-700">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-white p-1 shadow-sm border border-slate-200 dark:bg-slate-700 dark:border-slate-600 flex items-center justify-center">
-                                                 <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={24} height={24} />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-black uppercase text-slate-500 tracking-widest dark:text-slate-400">
-                                                        {drive.team.abbreviation} Drive
-                                                    </span>
-                                                    {drive.isScore && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
-                                                            Score
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className={`text-sm font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                    {drive.result}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 leading-tight">
-                                            <div>{drive.playCount} plays, {drive.yards} yds</div>
-                                            <div>{drive.timeElapsed} • {drive.startClock}</div>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Plays List */}
-                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                        {drive.plays.map((play) => (
-                                            <div key={play.id} className="flex gap-4 p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/30">
-                                                <div className="w-16 flex-shrink-0 flex flex-col items-center pt-0.5">
-                                                    <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 font-mono">{play.clock}</span>
-                                                    <span className="block text-[9px] text-slate-400 uppercase font-bold mt-0.5 dark:text-slate-500">
-                                                        {play.down && play.distance ? `${getOrdinal(play.down)} & ${play.distance}` : ''}
-                                                    </span>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 tracking-wider dark:bg-slate-800 dark:text-slate-400">{play.type}</span>
-                                                         {play.yardLine && (
-                                                            <span className="text-[9px] text-slate-400 font-mono dark:text-slate-500">
-                                                                {play.yardLine > 50 ? `OPP ${100 - play.yardLine}` : `OWN ${play.yardLine}`}
-                                                            </span>
-                                                         )}
-                                                         {play.yardsGained !== undefined && play.yardsGained !== 0 && (
-                                                             <span className={`text-[10px] font-black ml-auto ${play.yardsGained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                                                                {play.yardsGained > 0 ? '+' : ''}{play.yardsGained} yds
-                                                             </span>
-                                                         )}
-                                                    </div>
-                                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                                                        {play.text}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <DriveItem key={drive.id} drive={drive} />
                             ))}
                         </div>
                     )}
