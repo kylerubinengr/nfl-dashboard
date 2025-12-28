@@ -34,15 +34,18 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
     const [isExpanded, setIsExpanded] = useState(false);
 
     const isScore = drive.isScore;
-    const resultColor = isScore ? (drive.result.includes('TOUCHDOWN') ? 'text-green-700 dark:text-green-400' : 'text-amber-600 dark:text-amber-400') : 'text-slate-900 dark:text-slate-100';
-    const borderClass = isScore ? (drive.result.includes('TOUCHDOWN') ? 'border-l-green-500' : 'border-l-amber-500') : 'border-l-transparent';
+    const isTD = drive.result.includes('TOUCHDOWN');
+    
+    const borderStyle = isScore ? { borderLeftColor: drive.team.color } : {};
+    const resultStyle = isScore ? { color: drive.team.color, opacity: isTD ? 1 : 0.75 } : {};
 
     return (
         <div className="bg-white dark:bg-slate-900 group">
             {/* Drive Header - Clickable */}
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className={`relative px-3 py-2 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50 border-l-[3px] ${borderClass}`}
+                className={`relative px-3 py-2 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50 border-l-[3px] ${!isScore ? 'border-l-transparent' : ''}`}
+                style={borderStyle}
             >
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm">
@@ -54,7 +57,10 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                                 {drive.team.abbreviation} Drive
                             </span>
                             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <p className={`text-sm font-black uppercase tracking-tight leading-none ${resultColor}`}>
+                            <p 
+                                className={`text-sm font-black uppercase tracking-tight leading-none ${!isScore ? 'text-slate-900 dark:text-slate-100' : ''}`}
+                                style={resultStyle}
+                            >
                                 {drive.result}
                             </p>
                         </div>
