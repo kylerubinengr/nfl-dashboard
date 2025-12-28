@@ -258,36 +258,6 @@ export function AdvancedMatchupEngine({ homeTeam, awayTeam, comparison }: Advanc
 
   return (
     <div className="w-full bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden dark:bg-slate-950 dark:border-slate-800 flex flex-col">
-      {/* Header */}
-      <div className="grid grid-cols-[1fr_120px_1fr] bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-         {/* Away Header */}
-         <div className="p-4 flex flex-col items-center justify-center gap-2 relative bg-white dark:bg-slate-900" style={{ borderTop: `4px solid ${awayColors.light}` }}>
-            <div className="relative">
-                <SafeImage src={awayTeam.logoUrl} alt={awayTeam.abbreviation} width={48} height={48} className="drop-shadow-md" />
-            </div>
-            <div className="text-center">
-                <div className="text-lg font-black text-slate-900 dark:text-white leading-none">{awayTeam.abbreviation}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Away</div>
-            </div>
-         </div>
-         
-         {/* VS Column */}
-         <div className="flex flex-col items-center justify-center border-x border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50">
-            <span className="text-2xl font-black text-slate-300 dark:text-slate-700 italic">VS</span>
-         </div>
-
-         {/* Home Header */}
-         <div className="p-4 flex flex-col items-center justify-center gap-2 relative bg-white dark:bg-slate-900" style={{ borderTop: `4px solid ${homeColors.light}` }}>
-            <div className="relative">
-                <SafeImage src={homeTeam.logoUrl} alt={homeTeam.abbreviation} width={48} height={48} className="drop-shadow-md" />
-            </div>
-            <div className="text-center">
-                <div className="text-lg font-black text-slate-900 dark:text-white leading-none">{homeTeam.abbreviation}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Home</div>
-            </div>
-         </div>
-      </div>
-
       {/* Sections */}
       <div>
           {sections.map(section => (
