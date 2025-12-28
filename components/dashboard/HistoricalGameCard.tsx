@@ -99,6 +99,7 @@ export function HistoricalGameCard({ game }: HistoricalGameCardProps) {
         <TeamSection team={game.homeTeam} score={game.homeScore} isWinner={isHomeWinner} />
       </div>
 
+      {/*
       <BettingResultDisplay 
           bettingResult={game.bettingResult} 
           homeAbbr={game.homeTeam.abbreviation} 
@@ -106,6 +107,7 @@ export function HistoricalGameCard({ game }: HistoricalGameCardProps) {
           homeScore={game.homeScore}
           awayScore={game.awayScore}
       />
+      */}
 
       <footer className="px-4 py-2 text-center text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800 dark:text-slate-500">
         <div className="flex items-center justify-center gap-2">

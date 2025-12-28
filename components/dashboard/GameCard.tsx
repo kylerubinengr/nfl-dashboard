@@ -66,10 +66,13 @@ export function GameCard({ game }: { game: Game }) {
                 LIVE
               </span>
            ) : (isPre && game.weather) ? (
+              /* Weather commented out for now
               <div className="flex items-center gap-1.5 text-slate-600 font-semibold text-xs">
                 <WeatherIcon condition={game.weather.condition} />
                 <span>{game.weather.temperature}°F</span>
               </div>
+              */
+             null
            ) : null}
         </div>
       </header>

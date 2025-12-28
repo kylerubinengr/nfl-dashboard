@@ -180,9 +180,9 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
         </div>
       ) : (
         <div className="space-y-8">
-            {/* Top Row: Weather & Betting Side-by-Side */}
+            {/* Top Row: Weather & Betting Side-by-Side - COMMENTED OUT
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Weather */}
+                // Weather
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 h-full">
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                         <Wind className="w-5 h-5 text-blue-500" />
@@ -210,7 +210,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                     )}
                 </div>
 
-                {/* Betting */}
+                // Betting
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 h-full">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -226,6 +226,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                     <OddsTable bookmakers={game.bookmakers} />
                 </div>
             </div>
+            */}
 
             {/* Bottom Row: Advanced Matchup Engine */}
             {matchupComparison && (

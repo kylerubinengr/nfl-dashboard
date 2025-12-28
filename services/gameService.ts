@@ -52,7 +52,7 @@ const sortGames = (games: Game[]) => {
 export async function getGamesByWeek(
   week: number = 17, 
   seasonType: number = 2,
-  fetchOdds: boolean = true
+  fetchOdds: boolean = false
 ): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
   // Use 2025 for weeks 1-18 (Regular Season). 
   const year = 2025;
@@ -176,10 +176,12 @@ export async function getGamesByWeek(
         isIndoor = venue.indoor;
       }
 
+      /* Weather fetching commented out
       if (lat && lon && !isFinal) {
         const fetchedWeather = await getWeather(lat.toString(), lon.toString(), event.date);
         weather = isIndoor ? { ...fetchedWeather, condition: "Dome" } : fetchedWeather;
       }
+      */
 
       const homeScore = parseInt(homeComp.score) || 0;
       const awayScore = parseInt(awayComp.score) || 0;
@@ -412,7 +414,7 @@ async function getGameSummary(gameId: string): Promise<{ matchupStats: MatchupSt
   }
 }
 
-export async function getGameById(id: string, options: { fetchWeather?: boolean } = { fetchWeather: true }): Promise<Game | undefined> {
+export async function getGameById(id: string, options: { fetchWeather?: boolean } = { fetchWeather: false }): Promise<Game | undefined> {
   const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${id}`;
 
   try {
@@ -423,8 +425,9 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
     }
     const data = await summaryRes.json();
     
-    const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
-    const oddsData = await fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []);
+    // const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
+    // const oddsData = await fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []);
+    const oddsData: any[] = [];
 
     const competition = data.header.competitions[0];
     const statusType = data.header.competitions[0].status.type;
