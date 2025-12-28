@@ -546,13 +546,17 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
                 playCount: d.offensivePlays,
                 startClock: d.start?.clock?.displayValue,
                 isScore: d.isScore,
-                plays: plays.reverse(), // Newest first
+                plays: isFinal ? plays : plays.reverse(), // Newest first only for live games
                 startQuarter,
                 endQuarter,
                 homeScoreAfter,
                 awayScoreAfter
             };
-        }).reverse(); // Newest first
+        });
+
+        if (!isFinal) {
+            drives.reverse(); // Newest drive first for live games
+        }
     }
 
     const game: Game = {
