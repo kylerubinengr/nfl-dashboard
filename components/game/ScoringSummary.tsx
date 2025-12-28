@@ -49,28 +49,28 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                             <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest dark:text-slate-500">
                                 {drive.team.abbreviation} Drive
                             </span>
-                            {drive.isScore && (
-                                <span className="px-1 py-0.5 rounded bg-green-100 text-green-700 text-[8px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
-                                    Score
-                                </span>
-                            )}
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                            <p className={`text-[10px] font-bold uppercase tracking-wider ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {drive.result}
+                            </p>
                         </div>
-                        <p className={`text-xs font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                            {drive.result}
-                        </p>
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-4">
                      {/* Possession Header Scoreboard */}
-                     <div className="flex flex-col items-center justify-center bg-slate-50 px-2 py-0.5 rounded border border-slate-100 dark:bg-slate-800 dark:border-slate-700 min-w-[54px]">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-900 dark:text-slate-100 leading-none mb-0.5">
-                            <span>{drive.awayScoreAfter ?? 0}</span>
-                            <span className="text-slate-300 dark:text-slate-600">-</span>
-                            <span>{drive.homeScoreAfter ?? 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between w-full text-[8px] font-bold text-slate-400 uppercase leading-none gap-2">
+                     <div className="flex items-center gap-3 bg-slate-50 px-2.5 py-1 rounded border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                             <span>{awayAbbr}</span>
+                            <span className={`font-mono text-slate-900 dark:text-slate-100 ${drive.awayScoreAfter !== undefined && drive.awayScoreAfter > (drive.homeScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
+                                {drive.awayScoreAfter ?? 0}
+                            </span>
+                        </div>
+                        <span className="text-slate-300 dark:text-slate-600 text-[10px]">-</span>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                            <span className={`font-mono text-slate-900 dark:text-slate-100 ${drive.homeScoreAfter !== undefined && drive.homeScoreAfter > (drive.awayScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
+                                {drive.homeScoreAfter ?? 0}
+                            </span>
                             <span>{homeAbbr}</span>
                         </div>
                     </div>
