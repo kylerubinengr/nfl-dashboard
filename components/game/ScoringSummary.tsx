@@ -86,7 +86,9 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                     </div>
 
                      <div className="text-right text-xs font-medium text-slate-400 dark:text-slate-500 leading-tight hidden sm:block">
-                        <span>{drive.playCount} plays • {drive.yards} yds</span>
+                        <span>{drive.playCount} plays</span>
+                        <span className="mx-1.5 opacity-50">|</span>
+                        <span>{drive.yards} yds</span>
                         <span className="mx-1.5 opacity-50">|</span>
                         <span>{drive.timeElapsed}</span>
                     </div>
