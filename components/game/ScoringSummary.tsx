@@ -48,30 +48,31 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                 style={borderStyle}
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm">
+                    <div className="w-7 h-7 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm flex-shrink-0">
                             <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={20} height={20} />
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest dark:text-slate-500">
-                                {drive.team.abbreviation} Drive
-                            </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest dark:text-slate-500 whitespace-nowrap">
+                            {drive.team.abbreviation} Drive
+                        </span>
+                        <span className="text-slate-300 dark:text-slate-600">•</span>
+                        <p 
+                            className={`text-sm font-black uppercase tracking-tight leading-none whitespace-nowrap ${!isScore ? 'text-slate-900 dark:text-slate-100' : ''}`}
+                            style={resultStyle}
+                        >
+                            {drive.result}
+                        </p>
+                        
+                        <div className="hidden sm:flex items-center gap-2">
                             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <p 
-                                className={`text-sm font-black uppercase tracking-tight leading-none ${!isScore ? 'text-slate-900 dark:text-slate-100' : ''}`}
-                                style={resultStyle}
-                            >
-                                {drive.result}
-                            </p>
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 leading-none">
+                                <span>{drive.playCount} plays</span>
+                                <span className="opacity-50">•</span>
+                                <span>{drive.yards} yds</span>
+                                <span className="opacity-50">•</span>
+                                <span>{drive.timeElapsed}</span>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div className="hidden sm:flex items-center text-xs font-medium text-slate-400 dark:text-slate-500 leading-tight">
-                        <span>{drive.playCount} plays</span>
-                        <span className="mx-1.5 opacity-50">|</span>
-                        <span>{drive.yards} yds</span>
-                        <span className="mx-1.5 opacity-50">|</span>
-                        <span>{drive.timeElapsed}</span>
                     </div>
                 </div>
                 
