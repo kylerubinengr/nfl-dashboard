@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import { Team, ScoringPlay, Linescore, Drive } from "@/types/nfl";
+import { MatchupComparison } from "@/services/matchupService";
 import { SafeImage } from "../common/SafeImage";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { AdvancedMatchupEngine } from "./AdvancedMatchupEngine";
 
 interface ScoringSummaryProps {
     homeTeam: Team;
@@ -14,6 +16,7 @@ interface ScoringSummaryProps {
     homeScore: number;
     awayScore: number;
     drives?: Drive[];
+    comparison?: MatchupComparison | null;
 }
 
 const getOrdinal = (n: number) => {
@@ -143,9 +146,10 @@ export function ScoringSummary({
     awayLinescores,
     homeScore,
     awayScore,
-    drives
+    drives,
+    comparison
 }: ScoringSummaryProps) {
-    const [activeTab, setActiveTab] = useState<'summary' | 'pbp'>('summary');
+    const [activeTab, setActiveTab] = useState<'matchup' | 'summary' | 'pbp'>('summary');
     
     // --- Scoring Summary Logic ---
     const playsByQuarter: { [key: number]: ScoringPlay[] } = {};
@@ -188,6 +192,12 @@ export function ScoringSummary({
             {/* Tabs Header */}
             <div className="flex-shrink-0 flex border-b border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-800">
                 <button 
+                    onClick={() => setActiveTab('matchup')}
+                    className={`flex-1 py-3 text-sm font-black uppercase tracking-widest transition-colors ${activeTab === 'matchup' ? 'bg-white text-blue-600 border-b-2 border-blue-600 dark:bg-slate-900 dark:text-blue-400' : 'text-slate-400 hover:bg-white hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'}`}
+                >
+                    Matchup Stats
+                </button>
+                <button 
                     onClick={() => setActiveTab('summary')}
                     className={`flex-1 py-3 text-sm font-black uppercase tracking-widest transition-colors ${activeTab === 'summary' ? 'bg-white text-blue-600 border-b-2 border-blue-600 dark:bg-slate-900 dark:text-blue-400' : 'text-slate-400 hover:bg-white hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'}`}
                 >
@@ -203,7 +213,21 @@ export function ScoringSummary({
 
             {/* Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto">
-                {activeTab === 'summary' ? (
+                {activeTab === 'matchup' ? (
+                    <div className="h-full overflow-y-auto">
+                        {comparison ? (
+                            <AdvancedMatchupEngine 
+                                homeTeam={homeTeam} 
+                                awayTeam={awayTeam} 
+                                comparison={comparison} 
+                            />
+                        ) : (
+                            <div className="p-12 text-center text-slate-500 font-bold">
+                                Matchup data not available.
+                            </div>
+                        )}
+                    </div>
+                ) : activeTab === 'summary' ? (
                     <div className="overflow-x-auto h-full">
                         <div 
                             className="grid min-w-[800px]"

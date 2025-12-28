@@ -55,7 +55,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   }
 
   const isFinal = game.status === 'post';
-  const matchupComparison = !isFinal ? await getMatchupComparison(game.homeTeam.id, game.awayTeam.id) : null;
+  const matchupComparison = await getMatchupComparison(game.homeTeam.id, game.awayTeam.id);
 
   // Consensus Odds Calculation
   const consensusOdds: BettingOdds | null = game.bookmakers.length > 0 ? {
@@ -144,6 +144,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                     homeScore={game.homeScore || 0}
                     awayScore={game.awayScore || 0}
                     drives={game.drives}
+                    comparison={matchupComparison}
                  />
             )}
 
