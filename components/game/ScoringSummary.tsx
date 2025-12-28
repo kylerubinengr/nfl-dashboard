@@ -1,4 +1,7 @@
-import { Team, ScoringPlay, Linescore } from "@/types/nfl";
+"use client";
+
+import { useState } from "react";
+import { Team, ScoringPlay, Linescore, Drive } from "@/types/nfl";
 import { SafeImage } from "../common/SafeImage";
 
 interface ScoringSummaryProps {
@@ -9,7 +12,14 @@ interface ScoringSummaryProps {
     awayLinescores: Linescore[];
     homeScore: number;
     awayScore: number;
+    drives?: Drive[];
 }
+
+const getOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
 
 export function ScoringSummary({ 
     homeTeam, 
@@ -18,9 +28,12 @@ export function ScoringSummary({
     homeLinescores, 
     awayLinescores,
     homeScore,
-    awayScore
+    awayScore,
+    drives
 }: ScoringSummaryProps) {
+    const [activeTab, setActiveTab] = useState<'summary' | 'pbp'>('summary');
     
+    // --- Scoring Summary Logic ---
     const playsByQuarter: { [key: number]: ScoringPlay[] } = {};
     scoringPlays.forEach(play => {
         if (!playsByQuarter[play.quarter]) {
@@ -29,7 +42,6 @@ export function ScoringSummary({
         playsByQuarter[play.quarter].push(play);
     });
 
-    // Determine quarters based on linescores length to support OT dynamically
     const maxQuarters = Math.max(
         homeLinescores.length, 
         awayLinescores.length, 
@@ -59,86 +71,174 @@ export function ScoringSummary({
     
     return (
         <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 dark:bg-slate-900 dark:border-slate-800">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-800">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest dark:text-slate-200">Scoring Summary</h3>
-            </div>
-            
-            <div className="overflow-x-auto">
-                <div 
-                    className="grid min-w-[800px]"
-                    style={{
-                        gridTemplateColumns: `200px repeat(${quarters.length}, minmax(160px, 1fr)) 100px`
-                    }}
+            {/* Tabs Header */}
+            <div className="flex border-b border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-800">
+                <button 
+                    onClick={() => setActiveTab('summary')}
+                    className={`flex-1 py-3 text-sm font-black uppercase tracking-widest transition-colors ${activeTab === 'summary' ? 'bg-white text-blue-600 border-b-2 border-blue-600 dark:bg-slate-900 dark:text-blue-400' : 'text-slate-400 hover:bg-white hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'}`}
                 >
-                    {/* Header Row */}
-                    <div className="p-3 bg-slate-50 text-left font-black text-slate-400 uppercase text-xs tracking-wider border-b border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500">Team</div>
-                    {quarters.map(q => (
-                        <div key={`header-${q}`} className="p-3 bg-slate-50 text-center font-black text-slate-400 uppercase text-xs border-b border-l border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500">
-                            {q > 4 ? 'OT' : q}
-                        </div>
-                    ))}
-                    <div className="p-3 bg-slate-100 text-center font-black text-slate-800 uppercase text-xs border-b border-l border-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-800">Total</div>
-
-                    {/* Away Team Row */}
-                    <div className="p-3 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
-                        <div className="relative w-6 h-6 flex-shrink-0">
-                            <SafeImage src={awayTeam.logoUrl} alt={awayTeam.abbreviation} width={24} height={24} className="object-contain" />
-                        </div>
-                        <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{awayTeam.name}</span>
-                    </div>
-                    {quarters.map((q, i) => (
-                        <div key={`away-score-${q}`} className="p-3 flex items-center justify-center font-semibold text-slate-600 text-lg border-b border-l border-slate-100 dark:text-slate-400 dark:border-slate-800">
-                            {getScore(awayLinescores, i)}
-                        </div>
-                    ))}
-                    <div className="p-3 flex items-center justify-center font-black text-slate-900 text-xl bg-slate-50 border-b border-l border-slate-100 dark:bg-slate-800/30 dark:text-slate-100 dark:border-slate-800">
-                        {awayScore}
-                    </div>
-
-                    {/* Home Team Row */}
-                    <div className="p-3 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
-                        <div className="relative w-6 h-6 flex-shrink-0">
-                            <SafeImage src={homeTeam.logoUrl} alt={homeTeam.abbreviation} width={24} height={24} className="object-contain" />
-                        </div>
-                        <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{homeTeam.name}</span>
-                    </div>
-                    {quarters.map((q, i) => (
-                        <div key={`home-score-${q}`} className="p-3 flex items-center justify-center font-semibold text-slate-600 text-lg border-b border-l border-slate-100 dark:text-slate-400 dark:border-slate-800">
-                            {getScore(homeLinescores, i)}
-                        </div>
-                    ))}
-                    <div className="p-3 flex items-center justify-center font-black text-slate-900 text-xl bg-slate-50 border-b border-l border-slate-100 dark:bg-slate-800/30 dark:text-slate-100 dark:border-slate-800">
-                        {homeScore}
-                    </div>
-
-                    {/* Plays Row */}
-                    <div className="bg-slate-50/50 border-r border-slate-100 dark:bg-slate-800/50 dark:border-slate-800"></div> {/* Empty under Team Name */}
-                    {quarters.map(q => {
-                        const quarterPlays = playsByQuarter[q] || [];
-                        return (
-                            <div key={`plays-${q}`} className="p-3 space-y-4 border-l border-slate-100 px-4 dark:border-slate-800">
-                                {quarterPlays.length > 0 ? quarterPlays.map(play => {
-                                    const { scoringTeam, scoreString, opposingTeam } = getRunningScoreText(play);
-                                    return (
-                                        <div key={play.id} className="mb-4 last:mb-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <SafeImage src={play.team.logo} alt={play.team.abbreviation} width={16} height={16} />
-                                                <span className="font-bold text-xs dark:text-slate-300">{play.type}</span>
-                                                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{play.clock}</span>
-                                            </div>
-                                            <p className="text-xs text-slate-600 mb-1 dark:text-slate-400">{play.text}</p>
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-500">
-                                                <span className="font-bold text-slate-700 dark:text-slate-300">{scoringTeam}</span> {scoreString} {opposingTeam}
-                                            </p>
-                                        </div>
-                                    );
-                                }) : <div className="h-full w-full"></div>}
-                            </div>
-                        )
-                    })}
-                    <div className="bg-slate-50/50 border-l border-slate-100 dark:bg-slate-800/50 dark:border-slate-800"></div> {/* Empty under Total */}
-                </div>
+                    Scoring Summary
+                </button>
+                <button 
+                    onClick={() => setActiveTab('pbp')}
+                    className={`flex-1 py-3 text-sm font-black uppercase tracking-widest transition-colors ${activeTab === 'pbp' ? 'bg-white text-blue-600 border-b-2 border-blue-600 dark:bg-slate-900 dark:text-blue-400' : 'text-slate-400 hover:bg-white hover:text-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'}`}
+                >
+                    Play by Play
+                </button>
             </div>
+
+            {activeTab === 'summary' ? (
+                <div className="overflow-x-auto">
+                    <div 
+                        className="grid min-w-[800px]"
+                        style={{
+                            gridTemplateColumns: `200px repeat(${quarters.length}, minmax(160px, 1fr)) 100px`
+                        }}
+                    >
+                        {/* Header Row */}
+                        <div className="p-3 bg-slate-50 text-left font-black text-slate-400 uppercase text-xs tracking-wider border-b border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500">Team</div>
+                        {quarters.map(q => (
+                            <div key={`header-${q}`} className="p-3 bg-slate-50 text-center font-black text-slate-400 uppercase text-xs border-b border-l border-slate-100 dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-500">
+                                {q > 4 ? 'OT' : q}
+                            </div>
+                        ))}
+                        <div className="p-3 bg-slate-100 text-center font-black text-slate-800 uppercase text-xs border-b border-l border-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-800">Total</div>
+
+                        {/* Away Team Row */}
+                        <div className="p-3 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
+                            <div className="relative w-6 h-6 flex-shrink-0">
+                                <SafeImage src={awayTeam.logoUrl} alt={awayTeam.abbreviation} width={24} height={24} className="object-contain" />
+                            </div>
+                            <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{awayTeam.name}</span>
+                        </div>
+                        {quarters.map((q, i) => (
+                            <div key={`away-score-${q}`} className="p-3 flex items-center justify-center font-semibold text-slate-600 text-lg border-b border-l border-slate-100 dark:text-slate-400 dark:border-slate-800">
+                                {getScore(awayLinescores, i)}
+                            </div>
+                        ))}
+                        <div className="p-3 flex items-center justify-center font-black text-slate-900 text-xl bg-slate-50 border-b border-l border-slate-100 dark:bg-slate-800/30 dark:text-slate-100 dark:border-slate-800">
+                            {awayScore}
+                        </div>
+
+                        {/* Home Team Row */}
+                        <div className="p-3 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
+                            <div className="relative w-6 h-6 flex-shrink-0">
+                                <SafeImage src={homeTeam.logoUrl} alt={homeTeam.abbreviation} width={24} height={24} className="object-contain" />
+                            </div>
+                            <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{homeTeam.name}</span>
+                        </div>
+                        {quarters.map((q, i) => (
+                            <div key={`home-score-${q}`} className="p-3 flex items-center justify-center font-semibold text-slate-600 text-lg border-b border-l border-slate-100 dark:text-slate-400 dark:border-slate-800">
+                                {getScore(homeLinescores, i)}
+                            </div>
+                        ))}
+                        <div className="p-3 flex items-center justify-center font-black text-slate-900 text-xl bg-slate-50 border-b border-l border-slate-100 dark:bg-slate-800/30 dark:text-slate-100 dark:border-slate-800">
+                            {homeScore}
+                        </div>
+
+                        {/* Plays Row */}
+                        <div className="bg-slate-50/50 border-r border-slate-100 dark:bg-slate-800/50 dark:border-slate-800"></div> {/* Empty under Team Name */}
+                        {quarters.map(q => {
+                            const quarterPlays = playsByQuarter[q] || [];
+                            return (
+                                <div key={`plays-${q}`} className="p-3 space-y-4 border-l border-slate-100 px-4 dark:border-slate-800">
+                                    {quarterPlays.length > 0 ? quarterPlays.map(play => {
+                                        const { scoringTeam, scoreString, opposingTeam } = getRunningScoreText(play);
+                                        return (
+                                            <div key={play.id} className="mb-4 last:mb-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <SafeImage src={play.team.logo} alt={play.team.abbreviation} width={16} height={16} />
+                                                    <span className="font-bold text-xs dark:text-slate-300">{play.type}</span>
+                                                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{play.clock}</span>
+                                                </div>
+                                                <p className="text-xs text-slate-600 mb-1 dark:text-slate-400">{play.text}</p>
+                                                <p className="text-[10px] text-slate-500 dark:text-slate-500">
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300">{scoringTeam}</span> {scoreString} {opposingTeam}
+                                                </p>
+                                            </div>
+                                        );
+                                    }) : <div className="h-full w-full"></div>}
+                                </div>
+                            )
+                        })}
+                        <div className="bg-slate-50/50 border-l border-slate-100 dark:bg-slate-800/50 dark:border-slate-800"></div> {/* Empty under Total */}
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-slate-50 dark:bg-slate-950">
+                    {!drives || drives.length === 0 ? (
+                        <div className="p-12 text-center">
+                            <p className="text-slate-500 font-bold">No play-by-play data available.</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                            {drives.map((drive) => (
+                                <div key={drive.id} className="bg-white dark:bg-slate-900">
+                                    {/* Drive Header */}
+                                    <div className="sticky top-0 z-10 px-4 py-3 bg-slate-100/90 backdrop-blur-sm flex items-center justify-between border-b border-slate-200 dark:bg-slate-800/90 dark:border-slate-700">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-white p-1 shadow-sm border border-slate-200 dark:bg-slate-700 dark:border-slate-600 flex items-center justify-center">
+                                                 <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={24} height={24} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-black uppercase text-slate-500 tracking-widest dark:text-slate-400">
+                                                        {drive.team.abbreviation} Drive
+                                                    </span>
+                                                    {drive.isScore && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
+                                                            Score
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className={`text-sm font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                    {drive.result}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 leading-tight">
+                                            <div>{drive.playCount} plays, {drive.yards} yds</div>
+                                            <div>{drive.timeElapsed} • {drive.startClock}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Plays List */}
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                        {drive.plays.map((play) => (
+                                            <div key={play.id} className="flex gap-4 p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/30">
+                                                <div className="w-16 flex-shrink-0 flex flex-col items-center pt-0.5">
+                                                    <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 font-mono">{play.clock}</span>
+                                                    <span className="block text-[9px] text-slate-400 uppercase font-bold mt-0.5 dark:text-slate-500">
+                                                        {play.down && play.distance ? `${getOrdinal(play.down)} & ${play.distance}` : ''}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 tracking-wider dark:bg-slate-800 dark:text-slate-400">{play.type}</span>
+                                                         {play.yardLine && (
+                                                            <span className="text-[9px] text-slate-400 font-mono dark:text-slate-500">
+                                                                {play.yardLine > 50 ? `OPP ${100 - play.yardLine}` : `OWN ${play.yardLine}`}
+                                                            </span>
+                                                         )}
+                                                         {play.yardsGained !== undefined && play.yardsGained !== 0 && (
+                                                             <span className={`text-[10px] font-black ml-auto ${play.yardsGained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                                                {play.yardsGained > 0 ? '+' : ''}{play.yardsGained} yds
+                                                             </span>
+                                                         )}
+                                                    </div>
+                                                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                                                        {play.text}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

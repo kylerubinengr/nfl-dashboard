@@ -143,6 +143,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                     awayLinescores={game.linescores.away}
                     homeScore={game.homeScore || 0}
                     awayScore={game.awayScore || 0}
+                    drives={game.drives}
                  />
             )}
 
