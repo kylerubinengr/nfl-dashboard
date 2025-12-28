@@ -178,6 +178,10 @@ export type Drive = {
     playCount: number;
     startClock: string;
     isScore: boolean;
+    startQuarter?: number;
+    endQuarter?: number;
+    homeScoreAfter?: number;
+    awayScoreAfter?: number;
 };
 
 export type Game = {

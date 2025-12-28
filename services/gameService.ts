@@ -502,22 +502,8 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
             rawDrives.push(current);
         }
 
-        drives = rawDrives.map((d: any) => ({
-            id: d.id,
-            description: d.description,
-            team: {
-                id: d.team?.id,
-                logo: d.team?.logos?.[0]?.href || (d.team?.id === homeTeam.id ? homeTeam.logoUrl : awayTeam.logoUrl),
-                abbreviation: d.team?.abbreviation || d.team?.displayName,
-                color: d.team?.id === homeTeam.id ? homeTeam.color : awayTeam.color
-            },
-            result: d.result?.text || (typeof d.result === 'string' ? d.result : "In Progress"),
-            yards: typeof d.yards === 'object' ? d.yards.value : d.yards,
-            timeElapsed: d.timeElapsed?.displayValue || (typeof d.timeElapsed === 'string' ? d.timeElapsed : ""),
-            playCount: d.offensivePlays,
-            startClock: d.start?.clock?.displayValue,
-            isScore: d.isScore,
-            plays: (d.plays?.map((p: any) => ({
+        drives = rawDrives.map((d: any) => {
+            const plays = (d.plays?.map((p: any) => ({
                 id: p.id,
                 driveId: d.id,
                 clock: p.clock?.displayValue || (typeof p.clock === 'string' ? p.clock : ""),
@@ -533,9 +519,40 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
                 team: {
                     id: d.team?.id,
                     logo: d.team?.logos?.[0]?.href
-                }
-            })) || []).reverse()
-        })).reverse(); // Newest first
+                },
+                homeScore: p.homeScore,
+                awayScore: p.awayScore
+            })) || []);
+
+            // Plays are chronological from API. Last play has final score of drive.
+            const lastPlay = plays[plays.length - 1];
+            const homeScoreAfter = lastPlay?.homeScore ?? 0;
+            const awayScoreAfter = lastPlay?.awayScore ?? 0;
+            const startQuarter = d.start?.period?.number ?? plays[0]?.quarter;
+            const endQuarter = d.end?.period?.number ?? lastPlay?.quarter;
+
+            return {
+                id: d.id,
+                description: d.description,
+                team: {
+                    id: d.team?.id,
+                    logo: d.team?.logos?.[0]?.href || (d.team?.id === homeTeam.id ? homeTeam.logoUrl : awayTeam.logoUrl),
+                    abbreviation: d.team?.abbreviation || d.team?.displayName,
+                    color: d.team?.id === homeTeam.id ? homeTeam.color : awayTeam.color
+                },
+                result: d.result?.text || (typeof d.result === 'string' ? d.result : "In Progress"),
+                yards: typeof d.yards === 'object' ? d.yards.value : d.yards,
+                timeElapsed: d.timeElapsed?.displayValue || (typeof d.timeElapsed === 'string' ? d.timeElapsed : ""),
+                playCount: d.offensivePlays,
+                startClock: d.start?.clock?.displayValue,
+                isScore: d.isScore,
+                plays: plays.reverse(), // Newest first
+                startQuarter,
+                endQuarter,
+                homeScoreAfter,
+                awayScoreAfter
+            };
+        }).reverse(); // Newest first
     }
 
     const game: Game = {
