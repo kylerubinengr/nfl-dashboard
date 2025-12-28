@@ -75,9 +75,10 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                         </div>
                     </div>
 
-                     <div className="text-right text-[9px] font-mono font-medium text-slate-400 dark:text-slate-500 leading-tight hidden sm:block">
-                        <div>{drive.playCount} pl, {drive.yards} yd</div>
-                        <div>{drive.timeElapsed} • {drive.startClock}</div>
+                     <div className="text-right text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 leading-tight hidden sm:block">
+                        <span>{drive.playCount} plays, {drive.yards} yds</span>
+                        <span className="mx-1.5 opacity-50">|</span>
+                        <span>{drive.timeElapsed}</span>
                     </div>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                 </div>
