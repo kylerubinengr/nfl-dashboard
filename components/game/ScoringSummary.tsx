@@ -24,7 +24,7 @@ const getOrdinal = (n: number) => {
 
 function QuarterHeader({ quarter }: { quarter: number }) {
     return (
-        <div className="sticky top-0 z-20 px-4 py-2 bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700 font-black text-xs text-slate-500 uppercase tracking-widest shadow-sm">
+        <div className="sticky top-0 z-20 px-3 py-1.5 bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700 font-black text-[10px] text-slate-500 uppercase tracking-widest shadow-sm">
             {quarter > 4 ? 'Overtime' : `${getOrdinal(quarter)} Quarter`}
         </div>
     );
@@ -38,24 +38,24 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
             {/* Drive Header - Clickable */}
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="relative px-4 py-3 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50"
+                className="relative px-3 py-2 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50"
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm">
-                            <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={24} height={24} />
+                    <div className="w-7 h-7 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm">
+                            <SafeImage src={drive.team.logo} alt={drive.team.abbreviation} width={20} height={20} />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-black uppercase text-slate-500 tracking-widest dark:text-slate-400">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest dark:text-slate-500">
                                 {drive.team.abbreviation} Drive
                             </span>
                             {drive.isScore && (
-                                <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
+                                <span className="px-1 py-0.5 rounded bg-green-100 text-green-700 text-[8px] font-black uppercase tracking-wider dark:bg-green-900/30 dark:text-green-400">
                                     Score
                                 </span>
                             )}
                         </div>
-                        <p className={`text-sm font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <p className={`text-xs font-bold ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>
                             {drive.result}
                         </p>
                     </div>
@@ -63,20 +63,20 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                 
                 <div className="flex items-center gap-4">
                      {/* Possession Header Scoreboard */}
-                     <div className="flex flex-col items-center justify-center bg-slate-50 px-2 py-1 rounded border border-slate-100 dark:bg-slate-800 dark:border-slate-700 min-w-[60px]">
-                        <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 leading-none mb-0.5">
+                     <div className="flex flex-col items-center justify-center bg-slate-50 px-2 py-0.5 rounded border border-slate-100 dark:bg-slate-800 dark:border-slate-700 min-w-[54px]">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-900 dark:text-slate-100 leading-none mb-0.5">
                             <span>{drive.awayScoreAfter ?? 0}</span>
                             <span className="text-slate-300 dark:text-slate-600">-</span>
                             <span>{drive.homeScoreAfter ?? 0}</span>
                         </div>
-                        <div className="flex items-center justify-between w-full text-[9px] font-bold text-slate-400 uppercase leading-none gap-2">
+                        <div className="flex items-center justify-between w-full text-[8px] font-bold text-slate-400 uppercase leading-none gap-2">
                             <span>{awayAbbr}</span>
                             <span>{homeAbbr}</span>
                         </div>
                     </div>
 
-                     <div className="text-right text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 leading-tight hidden sm:block">
-                        <div>{drive.playCount} plays, {drive.yards} yds</div>
+                     <div className="text-right text-[9px] font-mono font-medium text-slate-400 dark:text-slate-500 leading-tight hidden sm:block">
+                        <div>{drive.playCount} pl, {drive.yards} yd</div>
                         <div>{drive.timeElapsed} • {drive.startClock}</div>
                     </div>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -85,30 +85,30 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
             
             {/* Plays List - Conditional Render */}
             {isExpanded && (
-                <div className="divide-y divide-slate-50 dark:divide-slate-800/50 bg-slate-50/30 dark:bg-black/10">
+                <div className="divide-y divide-slate-50 dark:divide-slate-800/50 bg-slate-50/20 dark:bg-black/10">
                     {drive.plays.map((play) => (
-                        <div key={play.id} className="flex gap-4 p-4 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/30 pl-8 border-l-4 border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                            <div className="w-16 flex-shrink-0 flex flex-col items-center pt-0.5">
-                                <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 font-mono">{play.clock}</span>
-                                <span className="block text-[9px] text-slate-400 uppercase font-bold mt-0.5 dark:text-slate-500">
+                        <div key={play.id} className="flex gap-3 p-2.5 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800/30 pl-6 border-l-2 border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                            <div className="w-14 flex-shrink-0 flex flex-col items-center pt-0.5">
+                                <span className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">{play.clock}</span>
+                                <span className="block text-[8px] text-slate-400 uppercase font-bold mt-0.5 dark:text-slate-500">
                                     {play.down && play.distance ? `${getOrdinal(play.down)} & ${play.distance}` : ''}
                                 </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 tracking-wider dark:bg-slate-800 dark:text-slate-400">{play.type}</span>
+                                <div className="flex items-center gap-2 mb-0.5">
+                                     <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-400 tracking-wider dark:bg-slate-800 dark:text-slate-500">{play.type}</span>
                                      {play.yardLine && (
                                         <span className="text-[9px] text-slate-400 font-mono dark:text-slate-500">
                                             {play.yardLine > 50 ? `OPP ${100 - play.yardLine}` : `OWN ${play.yardLine}`}
                                         </span>
                                      )}
                                      {play.yardsGained !== undefined && play.yardsGained !== 0 && (
-                                         <span className={`text-[10px] font-black ml-auto ${play.yardsGained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                         <span className={`text-[9px] font-black ml-auto ${play.yardsGained > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                                             {play.yardsGained > 0 ? '+' : ''}{play.yardsGained} yds
                                          </span>
                                      )}
                                 </div>
-                                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                                <p className="text-[13px] text-slate-600 dark:text-slate-300 leading-snug font-medium">
                                     {play.text}
                                 </p>
                             </div>
