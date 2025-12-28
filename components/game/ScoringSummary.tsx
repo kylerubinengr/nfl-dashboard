@@ -33,12 +33,16 @@ function QuarterHeader({ quarter }: { quarter: number }) {
 function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: string, awayAbbr: string }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
+    const isScore = drive.isScore;
+    const resultColor = isScore ? (drive.result.includes('TOUCHDOWN') ? 'text-green-700 dark:text-green-400' : 'text-amber-600 dark:text-amber-400') : 'text-slate-900 dark:text-slate-100';
+    const borderClass = isScore ? (drive.result.includes('TOUCHDOWN') ? 'border-l-green-500' : 'border-l-amber-500') : 'border-l-transparent';
+
     return (
         <div className="bg-white dark:bg-slate-900 group">
             {/* Drive Header - Clickable */}
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="relative px-3 py-2 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50"
+                className={`relative px-3 py-2 flex items-center justify-between border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors dark:border-slate-800 dark:hover:bg-slate-800/50 border-l-[3px] ${borderClass}`}
             >
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-full bg-slate-50 p-1 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center shadow-sm">
@@ -50,7 +54,7 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                                 {drive.team.abbreviation} Drive
                             </span>
                             <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <p className={`text-[10px] font-bold uppercase tracking-wider ${drive.isScore ? 'text-green-700 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                            <p className={`text-sm font-black uppercase tracking-tight leading-none ${resultColor}`}>
                                 {drive.result}
                             </p>
                         </div>
@@ -58,8 +62,8 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                 </div>
                 
                 <div className="flex items-center gap-4">
-                     {/* Possession Header Scoreboard */}
-                     <div className="flex items-center gap-3 bg-slate-50 px-2.5 py-1 rounded border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+                     {/* Possession Header Scoreboard - Pill Style */}
+                     <div className="flex items-center gap-3 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                             <span>{awayAbbr}</span>
                             <span className={`font-mono text-slate-900 dark:text-slate-100 ${drive.awayScoreAfter !== undefined && drive.awayScoreAfter > (drive.homeScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
@@ -75,8 +79,8 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                         </div>
                     </div>
 
-                     <div className="text-right text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 leading-tight hidden sm:block">
-                        <span>{drive.playCount} plays, {drive.yards} yds</span>
+                     <div className="text-right text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-tight hidden sm:block">
+                        <span>{drive.playCount} plays • {drive.yards} yds</span>
                         <span className="mx-1.5 opacity-50">|</span>
                         <span>{drive.timeElapsed}</span>
                     </div>
