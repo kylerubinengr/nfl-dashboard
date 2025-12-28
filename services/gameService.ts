@@ -1,8 +1,9 @@
-import { Game, Team, WeatherInfo, Bookmaker, BettingOdds, MatchupStats, StatLeader, TeamBoxscore, BettingResult } from "@/types/nfl";
+import { Game, Team, WeatherInfo, Bookmaker, BettingOdds, MatchupStats, StatLeader, TeamBoxscore, BettingResult, ScoringPlay, Linescore, BoxScoreData } from "@/types/nfl";
 import { TEAM_BRANDING } from "@/lib/team-branding";
 import { STADIUM_REGISTRY } from "@/lib/stadiums";
 import { weatherCache } from "@/lib/weatherCache";
 import { storage } from "@/lib/storage";
+import { TEAM_LOGOS, DEFAULT_NFL_LOGO } from "@/constants/teams";
 
 // --- Local Storage Snapshot Logic ---
 const getPreviousOdds = (): Record<string, Bookmaker[]> => {
@@ -44,8 +45,14 @@ const normalizeTeamName = (name: string): string => {
     .trim();
 };
 
+const sortGames = (games: Game[]) => {
+  return games.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
 export async function getGamesByWeek(
-  week: number = 17, seasonType: number = 2
+  week: number = 17, 
+  seasonType: number = 2,
+  fetchOdds: boolean = true
 ): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
   // Use 2025 for weeks 1-18 (Regular Season). 
   const year = 2025;
@@ -60,18 +67,18 @@ export async function getGamesByWeek(
       process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY === "YOUR_API_KEY"
     ) {
       console.warn("API keys not found. Using mock data.");
-      return { games: getMockGames(week), isSnapshot: false, lastUpdated: Date.now() };
+      return { games: sortGames(getMockGames(week)), isSnapshot: false, lastUpdated: Date.now() };
     }
 
     const [espnData, oddsData] = await Promise.all([
       fetch(espnUrl).then(res => res.ok ? res.json() : null).catch(() => null),
-      fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => [])
+      fetchOdds ? fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []) : Promise.resolve([])
     ]);
 
-    if (!espnData) {
+    if (!espnData?.events) {
         const snapshot = storage.getSnapshot(week);
         if (snapshot) {
-            return { games: snapshot.data, lastUpdated: snapshot.lastUpdated, isSnapshot: true };
+            return { games: sortGames(snapshot.data), lastUpdated: snapshot.lastUpdated, isSnapshot: true };
         }
         throw new Error("Failed to fetch ESPN data and no snapshot available");
     }
@@ -94,23 +101,27 @@ export async function getGamesByWeek(
         return (totalRecord || comp.records[0])?.summary ?? "0-0";
       };
 
+      const homeBranding = TEAM_BRANDING[homeComp.team.abbreviation as keyof typeof TEAM_BRANDING];
       const homeTeam: Team = {
         id: homeComp.team.id,
         name: homeComp.team.displayName,
         abbreviation: homeComp.team.abbreviation,
         record: getRecord(homeComp),
-        logoUrl: homeComp.team.logo,
-        color: TEAM_BRANDING[homeComp.team.abbreviation as keyof typeof TEAM_BRANDING]?.primary || "#000000",
+        logoUrl: TEAM_LOGOS[homeComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+        color: homeBranding?.primary || "#000000",
+        colors: homeBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
         clinchedPlayoffs: homeComp.playoffStatus?.clinched,
       };
 
+      const awayBranding = TEAM_BRANDING[awayComp.team.abbreviation as keyof typeof TEAM_BRANDING];
       const awayTeam: Team = {
         id: awayComp.team.id,
         name: awayComp.team.displayName,
         abbreviation: awayComp.team.abbreviation,
         record: getRecord(awayComp),
-        logoUrl: awayComp.team.logo,
-        color: TEAM_BRANDING[awayComp.team.abbreviation as keyof typeof TEAM_BRANDING]?.primary || "#000000",
+        logoUrl: TEAM_LOGOS[awayComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+        color: awayBranding?.primary || "#000000",
+        colors: awayBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
         clinchedPlayoffs: awayComp.playoffStatus?.clinched,
       };
 
@@ -207,7 +218,7 @@ export async function getGamesByWeek(
         week: espnData.week.number,
         date: event.date,
         venue: venue.fullName,
-        venueLocation: `${venue.address.city}, ${venue.address.state}`,
+        venueLocation: `${venue.address?.city}, ${venue.address?.state}`,
         homeTeam,
         awayTeam,
         bookmakers,
@@ -224,6 +235,10 @@ export async function getGamesByWeek(
     });
 
     const resolvedGames = await Promise.all(gamesPromises);
+
+    // Sort games by date
+    sortGames(resolvedGames);
+
     storeOdds(resolvedGames);
     storage.saveSnapshot(week, resolvedGames);
 
@@ -233,12 +248,11 @@ export async function getGamesByWeek(
     console.warn("Error fetching live game data, checking snapshots:", error);
     const snapshot = storage.getSnapshot(week);
     if (snapshot) {
-        return { games: snapshot.data, lastUpdated: snapshot.lastUpdated, isSnapshot: true };
+        return { games: sortGames(snapshot.data), lastUpdated: snapshot.lastUpdated, isSnapshot: true };
     }
-    return { games: getMockGames(week), isSnapshot: false };
+    return { games: sortGames(getMockGames(week)), isSnapshot: false };
   }
 }
-
 // Helper to determine if weather should be refetched based on game proximity
 const shouldRefetchWeather = (gameDate: string, lastFetchTime: number): boolean => {
   const now = Date.now();
@@ -261,14 +275,12 @@ export async function getWeather(
   gameDate: string
 ): Promise<WeatherInfo> {
   const cacheKey = `weather_${lat}_${lon}`;
-  const cached = weatherCache.get(cacheKey); // Note: we should store the lastUpdated time in the cache as well
+  const cached = weatherCache.get(cacheKey);
   
-  // Checking proximity logic
   if (cached && !shouldRefetchWeather(gameDate, cached.lastUpdated || 0)) {
     return cached;
   }
 
-  // Ensure imperial units are requested
   const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}&units=imperial`;
 
   try {
@@ -286,7 +298,7 @@ export async function getWeather(
       condition: mapWeatherCodeToCondition(data.weather[0].id),
       windSpeed: Math.round(data.wind.speed),
       precipChance: 0, 
-      lastUpdated: Date.now() // Store timestamp for proximity check
+      lastUpdated: Date.now()
     };
 
     weatherCache.set(cacheKey, weather);
@@ -297,90 +309,67 @@ export async function getWeather(
   }
 }
 
-async function getGameSummary(gameId: string): Promise<MatchupStats | undefined> {
+async function getGameSummary(gameId: string): Promise<{ matchupStats: MatchupStats; scoringPlays?: ScoringPlay[]; linescores?: { home: Linescore[], away: Linescore[] } } | undefined> {
   const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${gameId}`;
   try {
     const res = await fetch(summaryUrl);
     if (!res.ok) return undefined;
     const data = await res.json();
     
-    const leaders = data.leaders; 
-    if (!leaders || !Array.isArray(leaders)) return undefined;
+    if (!data.leaders) {
+        return { matchupStats: { home: {}, away: {} }, scoringPlays: [], linescores: { home: [], away: [] } };
+    }
 
     const parseTeamLeaders = (teamData: any) => {
-        if (!teamData) return undefined;
-        
+        if (!teamData) return {};
         const passing = teamData.leaders?.find((l: any) => l.name === "passingYards");
         const rushing = teamData.leaders?.find((l: any) => l.name === "rushingYards");
         const receiving = teamData.leaders?.find((l: any) => l.name === "receivingYards");
 
-        const mapLeader = (catData: any, categoryName: string) => {
+        const mapLeader = (catData: any, categoryName: string): StatLeader | undefined => {
              if (!catData || !catData.leaders || catData.leaders.length === 0) return undefined;
              const leader = catData.leaders[0];
              const athlete = leader.athlete;
              const displayValue = leader.displayValue || "";
-
              const parts = displayValue.split(/,\s+/).map((s: string) => s.trim());
              const stats: { [key: string]: string } = {};
-
              const findValue = (suffix: string) => {
                 const part = parts.find((p: string) => p.endsWith(suffix));
                 return part ? part.replace(suffix, "").trim() : "0";
              };
-
              if (leader.mainStat && leader.mainStat.label === "YDS") {
                  stats["Yds"] = leader.mainStat.value;
              } else {
                  stats["Yds"] = findValue("YDS");
              }
-             
              stats["TD"] = findValue("TD");
-
-             if (categoryName === "Passing") {
-                 stats["INT"] = findValue("INT");
-             } else if (categoryName === "Rushing") {
+             if (categoryName === "Passing") stats["INT"] = findValue("INT");
+             else if (categoryName === "Rushing") {
                  const carStr = findValue("CAR");
                  let car = parseFloat(carStr.replace(/,/g, ''));
                  let yds = parseFloat(stats["Yds"].toString().replace(/,/g, ''));
                  stats["AVG"] = (car > 0 && !isNaN(yds)) ? (yds / car).toFixed(1) : "0.0";
-             } else if (categoryName === "Receiving") {
-                 stats["REC"] = findValue("REC");
-             }
-
+             } else if (categoryName === "Receiving") stats["REC"] = findValue("REC");
              return {
-                name: athlete.displayName,
-                value: leader.mainStat?.value || stats["Yds"], 
-                category: categoryName,
-                teamAbbreviation: teamData.team.abbreviation,
-                logoUrl: athlete.headshot?.href,
-                detailedStats: stats
+                name: athlete.displayName, value: leader.mainStat?.value || stats["Yds"], category: categoryName,
+                teamAbbreviation: teamData.team.abbreviation, logoUrl: athlete.headshot?.href, detailedStats: stats
              };
         };
 
         return {
-            passingLeader: mapLeader(passing, "Passing"),
-            rushingLeader: mapLeader(rushing, "Rushing"),
-            receivingLeader: mapLeader(receiving, "Receiving"),
+            passingLeader: mapLeader(passing, "Passing"), rushingLeader: mapLeader(rushing, "Rushing"), receivingLeader: mapLeader(receiving, "Receiving"),
         };
     };
 
-    const parseBoxScore = (boxscoreData: any) => {
+    const parseBoxScore = (boxscoreData: any): BoxScoreData | undefined => {
         if (!boxscoreData || !boxscoreData.players) return undefined;
-
         const parseCategory = (name: string, headers: string[]) => {
             const categoryData = boxscoreData.players.find((p: any) => p.name === name);
             if (!categoryData) return { headers, players: [], totals: [] };
-
-            const players = categoryData.athletes.map((athlete: any) => ({
-                name: athlete.athlete.displayName,
-                stats: athlete.stats
-            }));
-
+            const players = categoryData.athletes.map((athlete: any) => ({ name: athlete.athlete.displayName, stats: athlete.stats }));
             const totals = categoryData.totals || headers.map(() => "");
-
             return { headers, players, totals };
         };
-
         return {
             passing: parseCategory("passing", ["C/ATT", "YDS", "AVG", "TD", "INT", "SACKS", "QBR", "RTG"]),
             rushing: parseCategory("rushing", ["CAR", "YDS", "AVG", "TD", "LONG"]),
@@ -395,49 +384,177 @@ async function getGameSummary(gameId: string): Promise<MatchupStats | undefined>
     const homeBox = data.boxscore?.players?.find((p:any) => p.team.id === homeComp?.id);
     const awayBox = data.boxscore?.players?.find((p:any) => p.team.id === awayComp?.id);
 
-    const homeTeamLeaders = leaders.find((l: any) => l.team.id === homeComp?.id);
-    const awayTeamLeaders = leaders.find((l: any) => l.team.id === awayComp?.id);
+    const homeTeamLeaders = data.leaders.find((l: any) => l.team.id === homeComp?.id);
+    const awayTeamLeaders = data.leaders.find((l: any) => l.team.id === awayComp?.id);
 
-    const homeStats = {
-        ...parseTeamLeaders(homeTeamLeaders),
-        boxscore: parseBoxScore(homeBox ? { players: homeBox.statistics } : undefined)
-    };
-    
-    const awayStats = {
-        ...parseTeamLeaders(awayTeamLeaders),
-        boxscore: parseBoxScore(awayBox ? { players: awayBox.statistics } : undefined)
-    };
+    const homeStats = { ...parseTeamLeaders(homeTeamLeaders), boxscore: parseBoxScore(homeBox ? { players: homeBox.statistics } : undefined) };
+    const awayStats = { ...parseTeamLeaders(awayTeamLeaders), boxscore: parseBoxScore(awayBox ? { players: awayBox.statistics } : undefined) };
 
-    const hasData = (s: any) => s && (s.passingLeader || s.rushingLeader || s.receivingLeader || s.boxscore);
+    const scoringPlays: ScoringPlay[] = (data.scoringPlays || [])
+        .filter((play: any) => play && play.text)
+        .map((play: any) => ({
+            id: play.id, quarter: play.period.number, clock: play.clock.displayValue, text: play.text || '', type: play.type?.text || 'N/A',
+            team: { id: play.team.id, abbreviation: play.team.abbreviation || play.team.displayName, logo: play.team.logo || '' },
+            scoreValue: play.scoringType?.value || 0, awayScore: play.awayScore, homeScore: play.homeScore
+        }));
 
-    if (!hasData(homeStats) && !hasData(awayStats)) return undefined;
+    const homeLinescores = homeComp?.linescores?.filter(Boolean).map((l: any) => ({ displayValue: l.displayValue, label: l.period?.toString() || '' })) || [];
+    const awayLinescores = awayComp?.linescores?.filter(Boolean).map((l: any) => ({ displayValue: l.displayValue, label: l.period?.toString() || '' })) || [];
 
     return {
-        home: homeStats || {},
-        away: awayStats || {}
+        matchupStats: { home: homeStats, away: awayStats },
+        scoringPlays,
+        linescores: { home: homeLinescores, away: awayLinescores }
     };
-
   } catch (e) {
+    console.error(`Error in getGameSummary for ID ${gameId}:`, e);
     return undefined;
   }
 }
 
-export async function getGameById(id: string): Promise<Game | undefined> {
-  const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
-  
-  for (const week of weeks) {
-    const { games } = await getGamesByWeek(week);
-    const game = games.find((g) => g.id === id);
-    if (game) {
-      const summary = await getGameSummary(id);
-      if (summary) {
-        game.matchupStats = summary;
-      }
-      return game;
+export async function getGameById(id: string, options: { fetchWeather?: boolean } = { fetchWeather: true }): Promise<Game | undefined> {
+  const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${id}`;
+
+  try {
+    const summaryRes = await fetch(summaryUrl);
+    if (!summaryRes.ok) {
+      console.error(`Failed to fetch summary for game ${id}`);
+      return undefined;
     }
+    const data = await summaryRes.json();
+    
+    const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
+    const oddsData = await fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []);
+
+    const competition = data.header.competitions[0];
+    const statusType = data.header.competitions[0].status.type;
+    const isFinal = statusType.name === 'STATUS_FINAL' || statusType.completed === true;
+
+    const homeComp = competition.competitors.find((c: any) => c.homeAway === "home");
+    const awayComp = competition.competitors.find((c: any) => c.homeAway === "away");
+
+    const getRecord = (comp: any) => comp.records?.[0]?.summary ?? "0-0";
+
+    const homeBranding = TEAM_BRANDING[homeComp.team.abbreviation as keyof typeof TEAM_BRANDING];
+    const homeTeam: Team = {
+      id: homeComp.team.id, name: homeComp.team.displayName, abbreviation: homeComp.team.abbreviation,
+      record: getRecord(homeComp), logoUrl: TEAM_LOGOS[homeComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+      color: homeBranding?.primary || "#000000",
+      colors: homeBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
+      clinchedPlayoffs: false,
+    };
+
+    const awayBranding = TEAM_BRANDING[awayComp.team.abbreviation as keyof typeof TEAM_BRANDING];
+    const awayTeam: Team = {
+      id: awayComp.team.id, name: awayComp.team.displayName, abbreviation: awayComp.team.abbreviation,
+      record: getRecord(awayComp), logoUrl: TEAM_LOGOS[awayComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+      color: awayBranding?.primary || "#000000",
+      colors: awayBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
+      clinchedPlayoffs: false,
+    };
+    
+    const previousOdds = getPreviousOdds();
+    const gameOdds = Array.isArray(oddsData) ? oddsData.find((o: any) => o.home_team.includes(homeTeam.name) && o.away_team.includes(awayTeam.name)) : null;
+    const prevGameBookmakers = previousOdds[id] || [];
+    const bookmakers: Bookmaker[] = gameOdds?.bookmakers
+        .filter((b: any) => ["draftkings", "fanduel", "betmgm"].includes(b.key))
+        .map((b: any) => {
+            const spreadMarket = b.markets.find((m: any) => m.key === "spreads");
+            const totalMarket = b.markets.find((m: any) => m.key === "totals");
+            const moneylineMarket = b.markets.find((m: any) => m.key === "h2h");
+            const currentSpread = spreadMarket?.outcomes.find((o: any) => o.name === homeTeam.name)?.point ?? 0;
+            const prevBookmaker = prevGameBookmakers.find(pb => pb.key === b.key);
+            const prevSpread = prevBookmaker?.odds.spread ?? currentSpread;
+            return {
+                key: b.key, title: b.title, lastUpdate: b.last_update,
+                odds: {
+                    spread: currentSpread, total: totalMarket?.outcomes[0]?.point ?? 0,
+                    moneylineHome: moneylineMarket?.outcomes.find((o: any) => o.name === homeTeam.name)?.price ?? 0,
+                    moneylineAway: moneylineMarket?.outcomes.find((o: any) => o.name === awayTeam.name)?.price ?? 0,
+                    movement: calculateMovement(currentSpread, prevSpread)
+                }
+            };
+        }) ?? [];
+
+    const venue = data.gameInfo.venue;
+    const isIndoor = venue.indoor;
+    let weather: WeatherInfo = { temperature: 0, condition: "N/A", windSpeed: 0, precipChance: 0 };
+    
+    if (options.fetchWeather && venue.coordinates && !isFinal) {
+      const fetchedWeather = await getWeather(venue.coordinates.latitude.toString(), venue.coordinates.longitude.toString(), data.header.date);
+      weather = isIndoor ? { ...fetchedWeather, condition: "Dome" } : fetchedWeather;
+    }
+
+    const summary = await getGameSummary(id);
+
+    // Process Drives
+    let drives: import("@/types/nfl").Drive[] = [];
+    if (data.drives) {
+        const previous = data.drives.previous || [];
+        const current = data.drives.current;
+        
+        // Deduplicate: If current drive exists, ensure it's not already in previous
+        const rawDrives = [...previous];
+        if (current && !rawDrives.some((d: any) => d.id === current.id)) {
+            rawDrives.push(current);
+        }
+
+        drives = rawDrives.map((d: any) => ({
+            id: d.id,
+            description: d.description,
+            team: {
+                id: d.team?.id,
+                logo: d.team?.logos?.[0]?.href || (d.team?.id === homeTeam.id ? homeTeam.logoUrl : awayTeam.logoUrl),
+                abbreviation: d.team?.abbreviation || d.team?.displayName,
+                color: d.team?.id === homeTeam.id ? homeTeam.color : awayTeam.color
+            },
+            result: d.result?.text || (typeof d.result === 'string' ? d.result : "In Progress"),
+            yards: typeof d.yards === 'object' ? d.yards.value : d.yards,
+            timeElapsed: d.timeElapsed?.displayValue || (typeof d.timeElapsed === 'string' ? d.timeElapsed : ""),
+            playCount: d.offensivePlays,
+            startClock: d.start?.clock?.displayValue,
+            isScore: d.isScore,
+            plays: (d.plays?.map((p: any) => ({
+                id: p.id,
+                driveId: d.id,
+                clock: p.clock?.displayValue || (typeof p.clock === 'string' ? p.clock : ""),
+                text: p.text || p.shortText || "",
+                type: p.type?.text || "",
+                down: p.start?.down,
+                distance: p.start?.distance,
+                yardLine: p.start?.yardLine,
+                yardsGained: p.statYardage,
+                quarter: p.period?.number,
+                isScore: p.scoringType?.value > 0,
+                wallclock: p.wallclock,
+                team: {
+                    id: d.team?.id,
+                    logo: d.team?.logos?.[0]?.href
+                }
+            })) || []).reverse()
+        })).reverse(); // Newest first
+    }
+
+    const game: Game = {
+      id: id, week: data.header.week, date: data.header.date || new Date().toISOString(),
+      venue: venue.fullName, venueLocation: `${venue.address?.city}, ${venue.address?.state}`,
+      homeTeam, awayTeam, bookmakers, weather,
+      broadcast: competition.broadcasts?.[0]?.names?.[0] ?? "",
+      isLive: statusType.state === 'in', indoor: isIndoor, status: statusType.state as 'pre' | 'in' | 'post',
+      homeScore: parseInt(homeComp.score) || 0, awayScore: parseInt(awayComp.score) || 0,
+      winnerId: homeComp.winner ? homeTeam.id : (awayComp.winner ? awayTeam.id : undefined),
+      matchupStats: summary?.matchupStats,
+      scoringPlays: summary?.scoringPlays,
+      linescores: summary?.linescores,
+      drives
+    };
+    
+    return game;
+
+  } catch (error) {
+    console.error(`Error constructing game object for ID ${id}:`, error);
+    return undefined;
   }
-  
-  return undefined;
 }
 
 export function getMockGames(week: number): Game[] {

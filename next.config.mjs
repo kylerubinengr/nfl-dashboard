@@ -11,6 +11,7 @@ const nextConfig = {
       },
     ],
   },
+  transpilePackages: ['msw', '@mswjs/interceptors', 'until-async', '@open-draft/until', 'strict-event-emitter'],
 };
 
 export default nextConfig;

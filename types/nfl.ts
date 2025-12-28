@@ -6,6 +6,11 @@ export type Team = {
   logoUrl: string;
   clinchedPlayoffs: boolean;
   color?: string;
+  colors?: {
+    primary: string;
+    lightAccent: string;
+    darkAccent: string;
+  };
 };
 
 export type WeatherInfo = {
@@ -122,6 +127,59 @@ export type BettingResult = {
     closingTotal: number;
 };
 
+export type ScoringPlay = {
+    id: string;
+    quarter: number;
+    clock: string;
+    text: string;
+    type: string;
+    team: {
+        id: string;
+        abbreviation: string;
+        logo: string;
+    };
+    scoreValue: number;
+    awayScore: number;
+    homeScore: number;
+};
+
+export type Linescore = {
+    displayValue: string;
+    label: string;
+};
+
+export type PlayByPlay = {
+    id: string;
+    driveId?: string;
+    clock: string;
+    text: string;
+    type: string;
+    down?: number;
+    distance?: number;
+    yardLine?: number;
+    yardsGained?: number;
+    quarter?: number;
+    isScore?: boolean;
+    wallclock?: string;
+    team?: {
+        id: string;
+        logo: string;
+    };
+};
+
+export type Drive = {
+    id: string;
+    description: string;
+    team: { id: string; logo: string; abbreviation: string; color?: string };
+    result: string;
+    plays: PlayByPlay[];
+    yards: number;
+    timeElapsed: string;
+    playCount: number;
+    startClock: string;
+    isScore: boolean;
+};
+
 export type Game = {
   id: string;
   week: number;
@@ -136,6 +194,8 @@ export type Game = {
   isLive?: boolean;
   indoor: boolean;
   matchupStats?: MatchupStats;
+  scoringPlays?: ScoringPlay[];
+  linescores?: { home: Linescore[], away: Linescore[] };
   // Historical/Result data
   status: 'pre' | 'in' | 'post';
   homeScore?: number;
@@ -143,4 +203,5 @@ export type Game = {
   winnerId?: string;
   boxscore?: { home: TeamBoxscore, away: TeamBoxscore };
   bettingResult?: BettingResult;
+  drives?: Drive[];
 };

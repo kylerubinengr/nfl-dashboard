@@ -12,7 +12,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number }) {
   return (
     <div className="flex items-center gap-2 overflow-x-auto overflow-y-visible pt-2 pb-2 scrollbar-hide">
       <div className="flex items-center gap-2 overflow-visible">
-        <span className="text-sm font-bold text-slate-500 whitespace-nowrap mr-2">
+        <span className="text-sm font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap mr-2">
           Week:
         </span>
         {weeks.map((week) => (
@@ -21,8 +21,8 @@ export function WeekSelector({ currentWeek }: { currentWeek: number }) {
             href={`/dashboard/${week}`}
             className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
               week === currentWeek
-                ? "bg-blue-600 text-white shadow-md"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-blue-600 text-white shadow-md dark:bg-blue-500"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
             }`}
           >
             {week}
@@ -38,8 +38,8 @@ export function WeekSelector({ currentWeek }: { currentWeek: number }) {
             href={`/dashboard/playoffs`}
             className={`relative px-3 py-1.5 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
               currentWeek > 18 || Number.isNaN(currentWeek)
-                ? "bg-blue-600 text-white shadow-md"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-blue-600 text-white shadow-md dark:bg-blue-500"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700"
             }`}
           >
             Playoffs

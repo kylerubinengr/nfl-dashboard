@@ -80,17 +80,17 @@ export function OddsTable({ bookmakers }: OddsTableProps) {
   const bestMoneylineAway = getUniqueBest(moneylineAwayValues, true);
 
   const getCellClasses = (value: number, bestValue: number | null) => {
-    let classes = "font-mono text-slate-500";
+    let classes = "font-mono text-slate-500 dark:text-slate-400";
     if (bestValue !== null && value === bestValue) {
-      classes = "font-bold text-slate-950 bg-slate-100 rounded-sm";
+      classes = "font-bold text-slate-950 bg-slate-100 rounded-sm dark:bg-slate-800 dark:text-slate-100";
     }
     return classes;
   };
 
   return (
-    <div className="p-3 bg-slate-50/70">
+    <div className="p-3 bg-slate-50/70 dark:bg-slate-800/30">
       <table className="w-full text-xs text-center border-separate [border-spacing:0.5rem_0.25rem]">
-        <thead className="text-[10px] uppercase tracking-widest text-slate-600">
+        <thead className="text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-400">
           <tr>
             <th className="text-left py-1">Bookmaker</th>
             <th>Spread</th>
@@ -102,7 +102,7 @@ export function OddsTable({ bookmakers }: OddsTableProps) {
         <tbody>
           {bookmakers.map((book) => (
             <tr key={book.key}>
-              <td className="text-left font-bold text-slate-700 py-2">
+              <td className="text-left font-bold text-slate-700 py-2 dark:text-slate-200">
                 {getBookmakerLogo(book.key)}
               </td>
               <td>
