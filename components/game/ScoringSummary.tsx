@@ -70,15 +70,15 @@ function DriveItem({ drive, homeAbbr, awayAbbr }: { drive: Drive, homeAbbr: stri
                 <div className="flex items-center gap-4">
                      {/* Possession Header Scoreboard - Pill Style */}
                      <div className="flex items-center gap-3 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
                             <span>{awayAbbr}</span>
-                            <span className={`font-mono text-slate-900 dark:text-slate-100 ${drive.awayScoreAfter !== undefined && drive.awayScoreAfter > (drive.homeScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
+                            <span className={`font-mono text-[13px] font-bold text-slate-900 dark:text-slate-100 ${drive.awayScoreAfter !== undefined && drive.awayScoreAfter > (drive.homeScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
                                 {drive.awayScoreAfter ?? 0}
                             </span>
                         </div>
-                        <span className="text-slate-300 dark:text-slate-600 text-[10px]">-</span>
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                            <span className={`font-mono text-slate-900 dark:text-slate-100 ${drive.homeScoreAfter !== undefined && drive.homeScoreAfter > (drive.awayScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
+                        <span className="text-slate-300 dark:text-slate-600 text-xs">-</span>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                            <span className={`font-mono text-[13px] font-bold text-slate-900 dark:text-slate-100 ${drive.homeScoreAfter !== undefined && drive.homeScoreAfter > (drive.awayScoreAfter || 0) ? 'text-slate-900 dark:text-white' : ''}`}>
                                 {drive.homeScoreAfter ?? 0}
                             </span>
                             <span>{homeAbbr}</span>
