@@ -204,10 +204,13 @@ export function PlayoffsTab() {
     if (!playoffPicture?.afc.allTeams) return [];
     const sorted = [...playoffPicture.afc.allTeams];
     sorted.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+      if (aVal === undefined || bVal === undefined) return 0;
+      if (aVal < bVal) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
+      if (aVal > bVal) {
         return sortConfig.direction === 'asc' ? 1 : -1;
       }
       return 0;
@@ -219,10 +222,13 @@ export function PlayoffsTab() {
     if (!playoffPicture?.nfc.allTeams) return [];
     const sorted = [...playoffPicture.nfc.allTeams];
     sorted.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+      if (aVal === undefined || bVal === undefined) return 0;
+      if (aVal < bVal) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
+      if (aVal > bVal) {
         return sortConfig.direction === 'asc' ? 1 : -1;
       }
       return 0;

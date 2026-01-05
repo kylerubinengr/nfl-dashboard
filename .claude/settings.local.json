@@ -15,7 +15,11 @@
       "Bash(if [ -f export_stats.py ])",
       "Bash(then rm export_stats.py)",
       "Bash(else echo \"File already deleted\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(npm test:*)",
+      "Bash(if [ -f /Users/kylerubin/nfl-dashboard/lib/sumerSportsService.ts ])",
+      "Bash(then mv /Users/kylerubin/nfl-dashboard/lib/sumerSportsService.ts /Users/kylerubin/nfl-dashboard/services/sumer-sports-service.ts)",
+      "Bash(else echo \"File does not exist\")"
     ]
   }
 }

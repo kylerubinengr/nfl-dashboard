@@ -1,9 +1,8 @@
 import { Game, Team, WeatherInfo, Bookmaker, BettingOdds, MatchupStats, StatLeader, TeamBoxscore, BettingResult, ScoringPlay, Linescore, BoxScoreData } from "@/types/nfl";
-import { TEAM_BRANDING } from "@/lib/team-branding";
-import { STADIUM_REGISTRY } from "@/lib/stadiums";
+import { TEAM_BRANDING, TEAM_LOGOS, DEFAULT_NFL_LOGO } from "@/constants/teams";
+import { STADIUM_REGISTRY } from "@/constants/stadiums";
 import { weatherCache } from "@/lib/weatherCache";
 import { storage } from "@/lib/storage";
-import { TEAM_LOGOS, DEFAULT_NFL_LOGO } from "@/constants/teams";
 
 // --- Local Storage Snapshot Logic ---
 const getPreviousOdds = (): Record<string, Bookmaker[]> => {

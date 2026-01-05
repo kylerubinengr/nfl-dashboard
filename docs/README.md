@@ -21,6 +21,7 @@ Architecture Decision Records (ADRs) and design documentation:
 Historical implementation documentation:
 - **[Phase 1 Implementation](./archive/PHASE_1_IMPLEMENTATION.md)** - Adaptive polling system implementation
 - **[Header Refactor Summary](./archive/HEADER_REFACTOR_SUMMARY.md)** - Header component refactoring details
+- **[Phase 4 & 5 Summary](./archive/PHASE_4_5_SUMMARY.md)** - Team data consolidation and file reorganization
 
 ## Contributing
 

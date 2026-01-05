@@ -1,4 +1,4 @@
-import { TEAM_ID_TO_ABBR } from "@/constants/mappings";
+import { TEAM_ID_TO_ABBR } from "@/constants/teams";
 import fs from "fs/promises";
 import path from "path";
 
