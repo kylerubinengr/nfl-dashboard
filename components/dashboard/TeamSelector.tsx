@@ -1,0 +1,58 @@
+"use client";
+
+import { TEAM_LOGOS, TEAM_NAMES } from "@/constants/teams";
+import Link from "next/link";
+import { SafeImage } from "@/components/common/SafeImage";
+
+// Division organization
+const NFL_DIVISIONS = {
+  "AFC East": ["BUF", "MIA", "NE", "NYJ"],
+  "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+  "AFC South": ["HOU", "IND", "JAX", "TEN"],
+  "AFC West": ["DEN", "KC", "LV", "LAC"],
+  "NFC East": ["DAL", "NYG", "PHI", "WSH"],
+  "NFC North": ["CHI", "DET", "GB", "MIN"],
+  "NFC South": ["ATL", "CAR", "NO", "TB"],
+  "NFC West": ["ARI", "LAR", "SF", "SEA"]
+};
+
+export function TeamSelector({ currentTeam }: { currentTeam?: string }) {
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8">
+        {Object.entries(NFL_DIVISIONS).map(([division, teams]) => (
+          <div key={division}>
+            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
+              {division}
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {teams.map((abbr) => (
+                <Link
+                  key={abbr}
+                  href={`/team/${abbr}`}
+                  title={TEAM_NAMES[abbr]}
+                  className={`
+                    w-12 h-12 rounded-full flex items-center justify-center
+                    transition-all duration-200 border-2
+                    ${currentTeam === abbr
+                      ? "bg-blue-600 border-blue-600 shadow-md dark:bg-blue-500 dark:border-blue-500 scale-110"
+                      : "bg-white border-slate-200 hover:bg-slate-100 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700"
+                    }
+                  `}
+                >
+                  <SafeImage
+                    src={TEAM_LOGOS[abbr]}
+                    alt={TEAM_NAMES[abbr]}
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                  />
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

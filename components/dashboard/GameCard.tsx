@@ -1,5 +1,7 @@
 import { Game, StatLeader } from '@/types/nfl';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useGameTabs } from '@/context/GameTabsContext';
 import { SafeImage } from '../common/SafeImage';
 import { 
   Cloud, 
@@ -9,10 +11,37 @@ import {
   MapPin
 } from 'lucide-react';
 
-export function GameCard({ game }: { game: Game }) {
+const getWeekDisplayName = (week: number, seasonType: number) => {
+  if (seasonType !== 3) return `Week ${week}`;
+  switch (week) {
+    case 1: return 'Wild Card';
+    case 2: return 'Divisional';
+    case 3: return 'Conference';
+    case 4:
+    case 5: // Super Bowl can sometimes be week 5
+      return 'Super Bowl';
+    default: return `Playoffs Week ${week}`;
+  }
+};
+
+export function GameCard({ game, showWeek = false }: { game: Game; showWeek?: boolean }) {
+  const router = useRouter();
+  const { tabs, isTabLimitReached, setIsLimitWarningVisible } = useGameTabs();
   const isPre = game.status === 'pre';
   const isLive = game.status === 'in';
   
+  const handleGameClick = (e: React.MouseEvent) => {
+    const tabExists = tabs.some(t => t.id === game.id);
+    
+    if (isTabLimitReached && !tabExists) {
+      e.preventDefault();
+      setIsLimitWarningVisible(true);
+      return;
+    }
+    
+    // Allow normal navigation
+  };
+
   // --- Helper: Date Formatter ---
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', { 
@@ -46,7 +75,11 @@ export function GameCard({ game }: { game: Game }) {
     };
   
       return (
-        <Link href={`/game/${game.id}`} className="block bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg shadow-lg hover:border-blue-500 hover:scale-[1.01] transition-all duration-300 overflow-hidden flex flex-col h-full dark:bg-slate-900 dark:border-slate-800 dark:hover:border-blue-500">
+        <Link 
+          href={`/game/${game.id}`} 
+          onClick={handleGameClick}
+          className="block bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg shadow-lg hover:border-blue-500 hover:scale-[1.01] transition-all duration-300 overflow-hidden flex flex-col h-full dark:bg-slate-900 dark:border-slate-800 dark:hover:border-blue-500"
+        >
           
           {/* 1. Header Cleanup & Alignment */}
           <header className="px-4 py-3 flex justify-between items-start gap-4 bg-slate-50/50 border-b border-slate-100 dark:bg-slate-800/50 dark:border-slate-800">
@@ -61,9 +94,16 @@ export function GameCard({ game }: { game: Game }) {
                        )}
                     </p>
                   </div>        <div className="flex items-center gap-2">
+           {showWeek && (
+              <span className="font-black text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest">
+                {getWeekDisplayName(game.week, game.seasonType)}
+              </span>
+           )}
            {isLive ? (
               <span className="font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest animate-pulse">
-                LIVE
+                {game.period === 2 && game.displayClock === '0:00' 
+                  ? 'HALF' 
+                  : (game.period && game.displayClock ? `Q${game.period} ${game.displayClock}` : 'LIVE')}
               </span>
            ) : (isPre && game.weather) ? (
               /* Weather commented out for now

@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { getGamesByWeek } from "@/services/gameService";
 import { Game } from "@/types/nfl";
 import { GameCard } from "@/components/dashboard/GameCard";
 import { HistoricalGameCard } from "@/components/dashboard/HistoricalGameCard";
 import { WeekSelector } from "@/components/dashboard/WeekSelector";
+import { SeasonSelector } from "@/components/dashboard/SeasonSelector";
 import { StatusBanner } from "@/components/dashboard/StatusBanner";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { TabSettingsPanel } from "@/components/dashboard/TabSettingsPanel";
+import { TabLimitWarning } from "@/components/ui/TabLimitWarning";
+import { ViewToggle } from "@/components/dashboard/ViewToggle";
+import { useGameTabs } from "@/context/GameTabsContext";
+import { useSeason } from "@/context/SeasonContext";
 import { Radio } from "lucide-react";
 
 export default function DashboardPage() {
@@ -16,6 +22,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const week = params.week as string;
   const weekNum = parseInt(week);
+  const { closeUnpinnedTabs } = useGameTabs();
+  const { selectedSeason, setViewMode } = useSeason();
+  const pathname = usePathname();
+
+  // Update view mode state
+  useEffect(() => {
+    setViewMode({ type: 'WEEK', href: pathname });
+  }, [pathname, setViewMode]);
 
   const [data, setData] = useState<{
     games: Game[];
@@ -33,10 +47,27 @@ export default function DashboardPage() {
     }
   }, [data]);
 
+  // Auto-close unpinned tabs when persistence is disabled
+  useEffect(() => {
+    const isPersistenceEnabled = localStorage.getItem('tabPersistenceEnabled');
+
+    if (isPersistenceEnabled === 'false') {
+      closeUnpinnedTabs();
+    }
+  }, [closeUnpinnedTabs]);
+
   // Initial Fetch
   useEffect(() => {
-    if (isNaN(weekNum) || weekNum < 1 || weekNum > 18) {
-      router.push("/dashboard/18");
+    const maxWeeks = selectedSeason >= 2021 ? 18 : 17;
+
+    if (isNaN(weekNum) || weekNum < 1 || weekNum > maxWeeks) {
+      // For historical seasons, user asked to default to Week 1. 
+      // Also handles invalid weeks.
+      // If we are in 2025 and week > 18, it might mean playoffs or invalid, defaulting to max regular season week or 1 is safest.
+      // But standard "invalid url" behavior usually redirects to a safe default.
+      
+      const targetWeek = (selectedSeason < 2025 || weekNum > 18) ? 1 : 18;
+      router.push(`/dashboard/${targetWeek}`);
       return;
     }
 
@@ -44,7 +75,7 @@ export default function DashboardPage() {
       setIsLoading(true);
       try {
         // Initial fetch gets everything including odds
-        const result = await getGamesByWeek(weekNum);
+        const result = await getGamesByWeek(weekNum, 2, false, selectedSeason);
         setData(result);
       } catch (e) {
         console.error("Dashboard fetch failed", e);
@@ -54,50 +85,70 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, [weekNum, router]);
+  }, [weekNum, router, selectedSeason]);
 
-  // Polling Logic for Live Games
+  // Smart Polling Logic for Live Games
   useEffect(() => {
     if (!data) return;
 
     const hasLiveGames = data.games.some(g => g.status === 'in');
-    
-    if (hasLiveGames) {
-        const intervalId = setInterval(async () => {
-            try {
-                // Fetch updates without hitting odds API
-                const result = await getGamesByWeek(weekNum, 2, false);
-                
-                // Merge new scores with existing odds/bookmakers
-                setData(prevData => {
-                    if (!prevData) return result;
-                    
-                    const mergedGames = result.games.map(newGame => {
-                        const oldGame = prevData.games.find(g => g.id === newGame.id);
-                        if (oldGame && newGame.bookmakers.length === 0) {
-                            return {
-                                ...newGame,
-                                bookmakers: oldGame.bookmakers
-                            };
-                        }
-                        return newGame;
-                    });
 
-                    return {
-                        ...result,
-                        games: mergedGames,
-                        // If we are polling, we are likely live, so preserve isSnapshot status or set to false if successful
-                        isSnapshot: result.isSnapshot 
-                    };
-                });
-            } catch (e) {
-                console.error("Polling failed", e);
-            }
-        }, 30000); // Poll every 30 seconds
-
-        return () => clearInterval(intervalId);
+    // Don't poll if there are no live games
+    if (!hasLiveGames) {
+      console.log('[Dashboard] No live games - polling stopped');
+      return;
     }
-  }, [data?.games, weekNum]); // Depend on games to re-evaluate if we still need to poll
+
+    // Only poll when tab is visible
+    const pollData = async () => {
+      if (document.visibilityState !== 'visible') {
+        console.log('[Dashboard] Tab hidden - skipping poll');
+        return;
+      }
+
+      try {
+        // Fetch updates without hitting odds API
+        const result = await getGamesByWeek(weekNum, 2, false, selectedSeason);
+
+        // Merge new scores with existing odds/bookmakers
+        setData(prevData => {
+          if (!prevData) return result;
+
+          const mergedGames = result.games.map(newGame => {
+            const oldGame = prevData.games.find(g => g.id === newGame.id);
+            if (oldGame && newGame.bookmakers.length === 0) {
+              return {
+                ...newGame,
+                bookmakers: oldGame.bookmakers
+              };
+            }
+            return newGame;
+          });
+
+          return {
+            ...result,
+            games: mergedGames,
+            isSnapshot: result.isSnapshot
+          };
+        });
+      } catch (e) {
+        console.error("Polling failed", e);
+      }
+    };
+
+    console.log('[Dashboard] Live games detected - starting smart polling (30s interval)');
+
+    // Initial poll
+    pollData();
+
+    // Set up interval
+    const intervalId = setInterval(pollData, 30000); // Poll every 30 seconds
+
+    return () => {
+      console.log('[Dashboard] Cleaning up polling interval');
+      clearInterval(intervalId);
+    };
+  }, [data?.games, weekNum, selectedSeason]); // Depend on games to re-evaluate if we still need to poll
 
   if (isLoading || !data) {
     return (
@@ -125,7 +176,11 @@ export default function DashboardPage() {
             )}
           </div>
           
-          <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+             <div className="flex items-center gap-2">
+                <SeasonSelector />
+                <ViewToggle />
+             </div>
              <WeekSelector currentWeek={weekNum} />
           </div>
         </div>
@@ -148,6 +203,10 @@ export default function DashboardPage() {
             </div>
         )}
       </div>
+
+      {/* Floating tab settings panel */}
+      <TabSettingsPanel />
+      <TabLimitWarning />
     </main>
   );
 }

@@ -6,6 +6,7 @@ import { MatchupComparison } from "@/services/matchupService";
 import { SafeImage } from "../common/SafeImage";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { AdvancedMatchupEngine } from "./AdvancedMatchupEngine";
+import { LiveDriveChart } from "./LiveDriveChart";
 
 interface ScoringSummaryProps {
     homeTeam: Team;
@@ -17,6 +18,7 @@ interface ScoringSummaryProps {
     awayScore: number;
     drives?: Drive[];
     comparison?: MatchupComparison | null;
+    isLive?: boolean;
 }
 
 const getOrdinal = (n: number) => {
@@ -147,7 +149,8 @@ export function ScoringSummary({
     homeScore,
     awayScore,
     drives,
-    comparison
+    comparison,
+    isLive
 }: ScoringSummaryProps) {
     const [activeTab, setActiveTab] = useState<'matchup' | 'summary' | 'pbp'>('summary');
     
@@ -309,6 +312,10 @@ export function ScoringSummary({
                         {!drives || drives.length === 0 ? (
                             <div className="p-12 text-center">
                                 <p className="text-slate-500 font-bold">No play-by-play data available.</p>
+                            </div>
+                        ) : isLive ? (
+                            <div className="p-4">
+                                <LiveDriveChart drives={drives} isLive={isLive} />
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-200 dark:divide-slate-800 pb-8">

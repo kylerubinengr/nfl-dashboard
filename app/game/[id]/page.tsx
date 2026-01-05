@@ -7,6 +7,8 @@ import { OddsTable } from "@/components/dashboard/OddsTable";
 import { StatTable } from "@/components/dashboard/StatTable";
 import { ScoringSummary } from "@/components/game/ScoringSummary";
 import { AdvancedMatchupEngine } from "@/components/game/AdvancedMatchupEngine";
+import { GameDetailHeader } from "@/components/game/GameDetailHeader";
+import { GameTabManager } from "@/components/game/GameTabManager";
 import { formatGameTime } from "@/lib/utils";
 import { BettingOdds } from "@/types/nfl";
 import { SafeImage } from "@/components/common/SafeImage";
@@ -35,20 +37,14 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
   if (isLive) {
       return (
-        <div className="container mx-auto px-4 pb-4 pt-0 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 max-w-7xl">
-            <nav className="flex justify-between items-center mb-6">
-                <div className="text-sm text-slate-500 dark:text-slate-400">
-                <Link href="/" className="hover:text-blue-500 dark:hover:text-blue-400">Home</Link>
-                <span className="mx-2">&gt;</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    {game.awayTeam.abbreviation} @ {game.homeTeam.abbreviation}
-                </span>
-                </div>
-                <Link href="/" className="flex items-center gap-2 text-sm text-blue-500 hover:underline dark:text-blue-400">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Dashboard
-                </Link>
-            </nav>
+        <div className="container mx-auto px-4 pb-4 pt-6 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 max-w-7xl">
+            <GameTabManager
+              gameId={game.id}
+              awayAbbreviation={game.awayTeam.abbreviation}
+              homeAbbreviation={game.homeTeam.abbreviation}
+              week={game.week}
+              season={game.season}
+            />
             <LiveGameView initialGame={game} />
         </div>
       );
@@ -87,50 +83,26 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="container mx-auto px-4 pb-4 pt-0 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 max-w-7xl">
-      <nav className="flex justify-between items-center mb-6">
-        <div className="text-sm text-slate-500 dark:text-slate-400">
-          <Link href="/" className="hover:text-blue-500 dark:hover:text-blue-400">Home</Link>
-          <span className="mx-2">&gt;</span>
-          <span className="font-semibold text-slate-700 dark:text-slate-200">
-            {game.awayTeam.abbreviation} @ {game.homeTeam.abbreviation}
-          </span>
-        </div>
-        <Link href="/" className="flex items-center gap-2 text-sm text-blue-500 hover:underline dark:text-blue-400">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
-      </nav>
+      <GameTabManager
+        gameId={game.id}
+        awayAbbreviation={game.awayTeam.abbreviation}
+        homeAbbreviation={game.homeTeam.abbreviation}
+        week={game.week}
+        season={game.season}
+      />
 
-      <header className="text-center mb-8 bg-white p-8 rounded-2xl shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
-          <div className="flex flex-col items-center gap-3">
-            <SafeImage src={game.awayTeam.logoUrl} alt={game.awayTeam.name} width={80} height={80} className="drop-shadow-sm" />
-            <div className="text-center">
-                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">{game.awayTeam.name}</h2>
-                <p className="text-slate-500 text-sm font-bold dark:text-slate-400">{game.awayTeam.record}</p>
-                {isFinal && <p className="text-4xl font-black mt-2 dark:text-slate-100">{game.awayScore}</p>}
-            </div>
-          </div>
-          
-          <div className="flex flex-col items-center gap-2">
-            <div className="text-xl font-black text-slate-200 bg-slate-50 px-4 py-1 rounded-full dark:bg-slate-800 dark:text-slate-600">{isFinal ? 'FINAL' : 'VS'}</div>
-            <p className="text-sm font-bold text-slate-600 mt-2 dark:text-slate-400">{formatGameTime(game.date)}</p>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 uppercase font-bold dark:text-slate-500">
-                <MapPin className="w-3 h-3" />
-                <span>{game.venue}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <SafeImage src={game.homeTeam.logoUrl} alt={game.homeTeam.name} width={80} height={80} className="drop-shadow-sm" />
-             <div className="text-center">
-                <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">{game.homeTeam.name}</h2>
-                <p className="text-slate-500 text-sm font-bold dark:text-slate-400">{game.homeTeam.record}</p>
-                {isFinal && <p className="text-4xl font-black mt-2 dark:text-slate-100">{game.homeScore}</p>}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Game Detail Header - Clear Visual Hierarchy */}
+      <GameDetailHeader
+        homeTeam={game.homeTeam}
+        awayTeam={game.awayTeam}
+        gameDate={game.date}
+        venue={game.venue}
+        venueLocation={game.venueLocation}
+        status={game.status}
+        homeScore={game.homeScore}
+        awayScore={game.awayScore}
+        broadcast={game.broadcast}
+      />
 
       {isFinal ? (
         <div className="mt-8 border-t border-slate-100 pt-8 dark:border-slate-800">

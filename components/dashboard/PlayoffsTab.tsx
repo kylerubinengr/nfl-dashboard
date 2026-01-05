@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getPlayoffPicture } from "@/services/playoffService";
 import { PlayoffConference, PlayoffPicture, PlayoffTeam } from "@/types/nfl";
 import { PlayoffMatchupCard } from "./PlayoffMatchupCard";
 import { SafeImage } from "../common/SafeImage";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { BracketView } from "./BracketView";
+import { ConferenceStandingsTable, SortConfig } from "./ConferenceStandingsTable";
+import { useSeason } from "@/context/SeasonContext";
 
 import { Info, List, Network } from "lucide-react";
 
@@ -131,6 +133,14 @@ const ConferencePlayoffView = ({ conference }: { conference: PlayoffConference }
             logoUrl: "",
             seed: teams.length + 1,
             record: "0-0-0",
+            wins: 0,
+            losses: 0,
+            ties: 0,
+            pointsFor: 0,
+            pointsAgainst: 0,
+            differential: 0,
+            streak: '-',
+            winPercentage: 0,
             clinchStatus: 'NONE'
         });
     }
@@ -141,7 +151,6 @@ const ConferencePlayoffView = ({ conference }: { conference: PlayoffConference }
         <div className="flex flex-col h-full">
             <h3 className="text-2xl font-black mb-6 text-slate-800 tracking-tight uppercase flex items-center justify-between">
                 <span>{conference.name} Bracket</span>
-                <span className="text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded-full tracking-[0.2em]">Live</span>
             </h3>
             <div className="space-y-4 flex-1">
                 <ByeWeekCard team={seed1} />
@@ -156,18 +165,21 @@ const ConferencePlayoffView = ({ conference }: { conference: PlayoffConference }
 }
 
 type ViewMode = 'STANDINGS' | 'BRACKET';
+type SortKey = keyof PlayoffTeam;
 
 export function PlayoffsTab() {
   const [playoffPicture, setPlayoffPicture] = useState<PlayoffPicture | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('STANDINGS');
+  const { selectedSeason } = useSeason();
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'seed', direction: 'asc' });
 
   useEffect(() => {
     async function fetchData() {
         try {
             setIsLoading(true);
-            const data = await getPlayoffPicture();
+            const data = await getPlayoffPicture(selectedSeason);
             if (data) {
                 setPlayoffPicture(data);
             } else {
@@ -186,7 +198,49 @@ export function PlayoffsTab() {
     }
 
     fetchData();
-  }, []);
+  }, [selectedSeason]);
+
+  const sortedAfcTeams = useMemo(() => {
+    if (!playoffPicture?.afc.allTeams) return [];
+    const sorted = [...playoffPicture.afc.allTeams];
+    sorted.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [playoffPicture, sortConfig]);
+
+  const sortedNfcTeams = useMemo(() => {
+    if (!playoffPicture?.nfc.allTeams) return [];
+    const sorted = [...playoffPicture.nfc.allTeams];
+    sorted.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [playoffPicture, sortConfig]);
+
+  const handleSort = (key: SortKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    // Default to 'asc' for string columns if it's the first time sorting them
+    if (typeof sortedNfcTeams[0]?.[key] === 'string' && sortConfig.key !== key) {
+        direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const toggleView = (mode: ViewMode) => {
       setViewMode(mode);
@@ -232,16 +286,26 @@ export function PlayoffsTab() {
 
         {viewMode === 'STANDINGS' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <ConferencePlayoffView conference={playoffPicture.nfc} />
-                <ConferencePlayoffView conference={playoffPicture.afc} />
+                <ConferenceStandingsTable
+                    conference="NFC"
+                    teams={sortedNfcTeams}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                />
+                <ConferenceStandingsTable
+                    conference="AFC"
+                    teams={sortedAfcTeams}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                />
             </div>
         ) : (
             <BracketView playoffPicture={playoffPicture} />
         )}
         
-        <footer className="pt-12 border-t border-slate-200 text-center">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed">
-                Legend: * - Clinched Home-Field Advantage | Z - Clinched Division | X - Clinched Playoff | E - Eliminated
+        <footer className="pt-12 border-t border-slate-200 text-center dark:border-slate-700">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed dark:text-slate-500">
+                Legend: * - Clinched Home-Field Advantage | z - Clinched Division | y - Clinched Wild Card | e - Eliminated
             </p>
         </footer>
     </div>

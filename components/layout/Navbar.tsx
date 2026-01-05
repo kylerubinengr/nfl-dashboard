@@ -1,24 +1,206 @@
 "use client";
 
 import { useTheme } from "@/context/ThemeContext";
-import { Moon, Sun } from "lucide-react";
+import { useGameTabs } from "@/context/GameTabsContext";
+import { useSeason } from "@/context/SeasonContext";
+import { Moon, Sun, X, Pin } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState, useRef } from "react";
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const { tabs, removeGameTab, togglePinTab } = useGameTabs();
+  const { selectedSeason, viewMode } = useSeason();
+  const pathname = usePathname();
+
+  // Determine label based on persisted view state
+  const homeLabel = `${viewMode.type === 'WEEK' ? 'Week' : 'Team'} - ${selectedSeason}`;
+  
+  // Home tab is active if we are on dashboard, team view, OR if we are on a game page (persisting context)
+  // unless we are explicitly on the about page
+  const isHomeActive = pathname === "/" || pathname.startsWith("/dashboard") || pathname.startsWith("/team");
 
   return (
-    <nav className="w-full flex justify-end items-center px-6 pt-3 pb-0 bg-transparent">
-      <button
-        onClick={toggleTheme}
-        className="p-2 rounded-full transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-        aria-label="Toggle Theme"
-      >
-        {theme === "light" ? (
-          <Sun className="w-5 h-5 text-slate-500 hover:text-amber-500 transition-colors" />
-        ) : (
-          <Moon className="w-5 h-5 text-slate-400 hover:text-indigo-400 transition-colors" />
-        )}
-      </button>
+    <nav className="w-full flex justify-between items-end px-4 pt-3 bg-slate-200 dark:bg-slate-900 border-b border-slate-300 dark:border-slate-800">
+      <div className="flex space-x-1 translate-y-[1px]">
+        {/* Reordered: About first, Home second */}
+        <Tab
+          href="/about"
+          label="About"
+          active={pathname === "/about"}
+        />
+        <Tab
+          href={viewMode.href}
+          label={homeLabel}
+          active={isHomeActive && !pathname.startsWith('/about')}
+        />
+
+        {/* Dynamic game tabs */}
+        {tabs.map((tab) => {
+          const allSameWeek = tabs.every(t => t.week === tab.week);
+          const allSameSeason = tabs.every(t => t.season === tab.season);
+          
+          let label = `${tab.awayAbbreviation}@${tab.homeAbbreviation}`;
+          let weekPrefix = '';
+
+          if (!allSameWeek) {
+            weekPrefix = tab.week >= 19 ? 'P' : `W${tab.week}`;
+          }
+
+          if (!allSameSeason) {
+            const shortSeason = tab.season.toString().slice(-2);
+            weekPrefix = `${shortSeason} ${weekPrefix}`.trim();
+          }
+
+          if (weekPrefix) {
+            label = `${weekPrefix} ${label}`;
+          }
+
+          return (
+            <GameTab
+              key={tab.id}
+              id={tab.id}
+              label={label}
+              active={pathname === `/game/${tab.id}`}
+              isPinned={tab.isPinned}
+              onClose={() => removeGameTab(tab.id)}
+              onTogglePin={() => togglePinTab(tab.id)}
+            />
+          );
+        })}
+      </div>
+
+      <div className="pb-2">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full transition-colors hover:bg-slate-300 dark:hover:bg-slate-800"
+          aria-label="Toggle Theme"
+        >
+          {theme === "light" ? (
+            <Sun className="w-5 h-5 text-slate-600 hover:text-amber-600 transition-colors" />
+          ) : (
+            <Moon className="w-5 h-5 text-slate-400 hover:text-indigo-400 transition-colors" />
+          )}
+        </button>
+      </div>
     </nav>
+  );
+}
+
+function Tab({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`
+        px-6 py-2 rounded-t-lg text-sm font-medium transition-all duration-200 border-t border-x
+        ${active
+          ? "bg-slate-50 dark:bg-slate-950 text-indigo-600 dark:text-indigo-400 border-slate-300 dark:border-slate-800 border-b-transparent"
+          : "bg-transparent text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-300/50 dark:hover:bg-slate-800/50"
+        }
+      `}
+    >
+      {label}
+    </Link>
+  );
+}
+
+// Dynamic game tab with close button and pin functionality
+function GameTab({
+  id,
+  label,
+  active,
+  isPinned,
+  onClose,
+  onTogglePin
+}: {
+  id: string;
+  label: string;
+  active: boolean;
+  isPinned: boolean;
+  onClose: () => void;
+  onTogglePin: () => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Prevent Link click
+    onClose();
+  };
+
+  const handlePinToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onTogglePin();
+  };
+
+  const handleTabClick = (e: React.MouseEvent) => {
+    if (!active) return; // Only handle double-click on active tab
+
+    setClickCount((prev) => prev + 1);
+
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+
+    clickTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 300);
+
+    // Double-click detected
+    if (clickCount === 1) {
+      e.preventDefault();
+      onTogglePin();
+      setClickCount(0);
+    }
+  };
+
+  return (
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative group"
+    >
+      <Link
+        href={`/game/${id}`}
+        onClick={handleTabClick}
+        className={`
+          px-6 py-2 rounded-t-lg text-sm font-medium transition-all duration-200 border-t border-x
+          flex items-center gap-2
+          ${!isPinned ? 'italic' : ''}
+          ${active
+            ? "bg-slate-50 dark:bg-slate-950 text-indigo-600 dark:text-indigo-400 border-slate-300 dark:border-slate-800 border-b-transparent"
+            : "bg-transparent text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-300/50 dark:hover:bg-slate-800/50"
+          }
+        `}
+      >
+        <span className={isHovered ? "pr-8" : ""}>{label}</span>
+
+        {/* Pin button - appears on hover */}
+        {isHovered && (
+          <button
+            onClick={handlePinToggle}
+            className="absolute right-8 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            aria-label={isPinned ? `Unpin ${label} tab` : `Pin ${label} tab`}
+          >
+            <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current' : ''}`} />
+          </button>
+        )}
+
+        {/* Close button - appears on hover */}
+        {isHovered && (
+          <button
+            onClick={handleClose}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            aria-label={`Close ${label} tab`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </Link>
+    </div>
   );
 }

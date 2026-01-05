@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Game } from "@/types/nfl";
 import { refreshGameData } from "@/app/actions/gameActions";
+import { useAdaptivePolling } from "@/hooks/useAdaptivePolling";
 import { LiveGameHeader } from "./LiveGameHeader";
-import { LiveDriveChart } from "./LiveDriveChart";
 import { ScoringSummary } from "./ScoringSummary";
 import { StatTable } from "@/components/dashboard/StatTable";
 import { SafeImage } from "@/components/common/SafeImage";
@@ -15,18 +15,16 @@ interface LiveGameViewProps {
 
 export default function LiveGameView({ initialGame }: LiveGameViewProps) {
   const [game, setGame] = useState<Game>(initialGame);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Poll every 1 second for live updates
-    const interval = setInterval(async () => {
-      const updatedGame = await refreshGameData(game.id);
-      if (updatedGame) {
-        setGame(updatedGame);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [game.id]);
+  // Replace old useEffect polling with adaptive polling hook
+  const { isPolling, currentStatus, hasError, isVisible } = useAdaptivePolling({
+    gameId: game.id,
+    initialStatus: initialGame.status,
+    fetchFunction: refreshGameData,
+    onUpdate: setGame,
+    onError: (err) => setError(err.message),
+  });
 
   const currentPlay = game.drives?.[0]?.plays?.[0];
   const clockDisplay = game.status === 'in' 
@@ -35,6 +33,51 @@ export default function LiveGameView({ initialGame }: LiveGameViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Status Indicator - Shows polling state to user */}
+      <div className="flex justify-between items-center px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2">
+          {isPolling && isVisible && (
+            <>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Live updates active
+                {currentStatus === 'in' && ' (10s refresh)'}
+                {currentStatus === 'pre' && ' (60s refresh)'}
+              </span>
+            </>
+          )}
+          {!isVisible && (
+            <>
+              <div className="w-2 h-2 bg-slate-400 rounded-full" />
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                Updates paused (tab hidden)
+              </span>
+            </>
+          )}
+          {hasError && (
+            <>
+              <div className="w-2 h-2 bg-amber-500 rounded-full" />
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-500">
+                Connection issue - retrying in 30s
+              </span>
+            </>
+          )}
+          {currentStatus === 'post' && (
+            <>
+              <div className="w-2 h-2 bg-slate-400 rounded-full" />
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Game finished - updates stopped
+              </span>
+            </>
+          )}
+        </div>
+        {error && (
+          <span className="text-xs text-red-600 dark:text-red-400">
+            {error}
+          </span>
+        )}
+      </div>
+
       <LiveGameHeader 
         homeTeam={game.homeTeam}
         awayTeam={game.awayTeam}
@@ -42,8 +85,6 @@ export default function LiveGameView({ initialGame }: LiveGameViewProps) {
         awayScore={game.awayScore || 0}
         clock={clockDisplay}
       />
-
-      <LiveDriveChart drives={game.drives || []} isLive={game.status === 'in'} />
 
       {game.scoringPlays && game.linescores && (
          <ScoringSummary 
@@ -54,6 +95,8 @@ export default function LiveGameView({ initialGame }: LiveGameViewProps) {
             awayLinescores={game.linescores.away}
             homeScore={game.homeScore || 0}
             awayScore={game.awayScore || 0}
+            drives={game.drives || []}
+            isLive={game.status === 'in'}
          />
       )}
 

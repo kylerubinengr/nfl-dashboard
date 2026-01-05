@@ -4,9 +4,25 @@ import { Game, Team, BettingResult } from "@/types/nfl";
 import { Home, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useGameTabs } from "@/context/GameTabsContext";
+
+const getWeekDisplayName = (week: number, seasonType: number) => {
+  if (seasonType !== 3) return `Week ${week}`;
+  switch (week) {
+    case 1: return 'Wild Card';
+    case 2: return 'Divisional';
+    case 3: return 'Conference';
+    case 4:
+    case 5: // Super Bowl can sometimes be week 5
+      return 'Super Bowl';
+    default: return `Playoffs Week ${week}`;
+  }
+};
 
 interface HistoricalGameCardProps {
   game: Game;
+  showWeek?: boolean;
 }
 
 const TeamSection = ({ team, score, isWinner }: { team: Team; score?: number; isWinner: boolean }) => (
@@ -76,12 +92,28 @@ const BettingResultDisplay = ({ bettingResult, homeAbbr, awayAbbr, homeScore, aw
   );
 };
 
-export function HistoricalGameCard({ game }: HistoricalGameCardProps) {
+export function HistoricalGameCard({ game, showWeek = false }: HistoricalGameCardProps) {
+  const router = useRouter();
+  const { tabs, isTabLimitReached, setIsLimitWarningVisible } = useGameTabs();
   const isAwayWinner = game.winnerId === game.awayTeam.id;
   const isHomeWinner = game.winnerId === game.homeTeam.id;
 
+  const handleGameClick = (e: React.MouseEvent) => {
+    const tabExists = tabs.some(t => t.id === game.id);
+    
+    if (isTabLimitReached && !tabExists) {
+      e.preventDefault();
+      setIsLimitWarningVisible(true);
+      return;
+    }
+  };
+
   return (
-    <Link href={`/game/${game.id}`} className="block bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg shadow-lg hover:border-blue-500 hover:scale-[1.01] transition-all duration-300 overflow-hidden dark:bg-slate-900 dark:border-slate-800 dark:hover:border-blue-500">
+    <Link 
+      href={`/game/${game.id}`} 
+      onClick={handleGameClick}
+      className="block bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg shadow-lg hover:border-blue-500 hover:scale-[1.01] transition-all duration-300 overflow-hidden dark:bg-slate-900 dark:border-slate-800 dark:hover:border-blue-500"
+    >
       <header className="px-4 py-3 flex justify-between items-start gap-4 bg-slate-50/50 border-b border-slate-100 dark:bg-slate-800/50 dark:border-slate-800">
         <div className="text-sm text-slate-700 dark:text-slate-200">
           <p>{game.date ? new Date(game.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</p>
@@ -89,7 +121,7 @@ export function HistoricalGameCard({ game }: HistoricalGameCardProps) {
         </div>
         <div className="flex items-center gap-2">
             <span className="font-black text-slate-900 bg-slate-200 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest dark:bg-slate-700 dark:text-slate-100">
-                FINAL
+                {showWeek ? getWeekDisplayName(game.week, game.seasonType) : 'FINAL'}
             </span>
         </div>
       </header>

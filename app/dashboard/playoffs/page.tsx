@@ -2,6 +2,7 @@
 
 import { WeekSelector } from "@/components/dashboard/WeekSelector";
 import { PlayoffsTab } from "@/components/dashboard/PlayoffsTab";
+import { TabLimitWarning } from "@/components/ui/TabLimitWarning";
 
 export default function PlayoffsPage() {
   return (
@@ -21,6 +22,7 @@ export default function PlayoffsPage() {
 
         <PlayoffsTab />
       </div>
+      <TabLimitWarning />
     </main>
   );
 }

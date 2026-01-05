@@ -1,3 +1,5 @@
+export type GameStatus = 'pre' | 'in' | 'post';
+
 export type Team = {
   id: string;
   name: string;
@@ -92,6 +94,19 @@ export type PlayoffTeam = {
   logoUrl: string;
   seed: number;
   record: string;
+
+  // Split W-L-T values for standings table
+  wins: number;
+  losses: number;
+  ties: number;
+
+  // Stats for standings table
+  pointsFor: number;
+  pointsAgainst: number;
+  differential: number;
+  streak: string;
+  winPercentage: number;
+
   clinchStatus: 'CLINCHED_HOMEFIELD' | 'CLINCHED_DIVISION' | 'CLINCHED_PLAYOFF' | 'ELIMINATED' | 'NONE';
   tiebreakerReason?: string;
   magicNumber?: number;
@@ -104,6 +119,7 @@ export type PlayoffConference = {
   teams: PlayoffTeam[];
   inTheHunt: PlayoffTeam[];
   eliminated: PlayoffTeam[];
+  allTeams: PlayoffTeam[];  // All 16 teams for standings table
 };
 
 export type PlayoffPicture = {
@@ -187,6 +203,10 @@ export type Drive = {
 export type Game = {
   id: string;
   week: number;
+  season: number;
+  seasonType: number;
+  displayClock?: string;
+  period?: number;
   date: string;
   venue: string;
   venueLocation: string;
@@ -201,7 +221,7 @@ export type Game = {
   scoringPlays?: ScoringPlay[];
   linescores?: { home: Linescore[], away: Linescore[] };
   // Historical/Result data
-  status: 'pre' | 'in' | 'post';
+  status: GameStatus;
   homeScore?: number;
   awayScore?: number;
   winnerId?: string;

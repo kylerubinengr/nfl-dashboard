@@ -52,10 +52,10 @@ const sortGames = (games: Game[]) => {
 export async function getGamesByWeek(
   week: number = 17, 
   seasonType: number = 2,
-  fetchOdds: boolean = false
+  fetchOdds: boolean = false,
+  year: number = 2025
 ): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
-  // Use 2025 for weeks 1-18 (Regular Season). 
-  const year = 2025;
+  // Use provided year for weeks 1-18 (Regular Season). 
   const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${year}&seasontype=${seasonType}&week=${week}`;
   const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
 
@@ -218,6 +218,8 @@ export async function getGamesByWeek(
       return {
         id: event.id,
         week: espnData.week.number,
+        season: year,
+        seasonType: seasonType,
         date: event.date,
         venue: venue.fullName,
         venueLocation: `${venue.address?.city}, ${venue.address?.state}`,
@@ -229,6 +231,8 @@ export async function getGamesByWeek(
         isLive: statusState === 'in',
         indoor: !!isIndoor,
         status: statusState as 'pre' | 'in' | 'post',
+        displayClock: event.status.displayClock,
+        period: event.status.period,
         homeScore,
         awayScore,
         winnerId,
@@ -255,6 +259,54 @@ export async function getGamesByWeek(
     return { games: sortGames(getMockGames(week)), isSnapshot: false };
   }
 }
+
+/**
+ * Fetches all games for a specific team in a given season
+ * @param teamAbbreviation - Team abbreviation (e.g., "BUF", "KC")
+ * @param year - Season year (e.g., 2025)
+ * @param seasonType - 2 = Regular Season, 3 = Playoffs (default: 2)
+ * @returns Array of games featuring the specified team, sorted chronologically
+ */
+export async function getGamesByTeam(
+  teamAbbreviation: string,
+  year: number = 2025
+): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
+  // Determine max weeks based on season for regular season
+  const maxRegularWeeks = year >= 2021 ? 18 : 17;
+  const regularSeasonPromises = Array.from({ length: maxRegularWeeks }, (_, i) =>
+    getGamesByWeek(i + 1, 2, false, year)
+  );
+
+  // Playoffs are seasonType 3, weeks 1 (Wild Card) through 5 (Super Bowl)
+  const playoffPromises = Array.from({ length: 5 }, (_, i) =>
+    getGamesByWeek(i + 1, 3, false, year)
+  );
+
+  // Fetch all regular season and playoff weeks in parallel
+  const allPromises = [...regularSeasonPromises, ...playoffPromises];
+  const allWeekResults = await Promise.all(allPromises);
+
+  // Flatten all games and filter for the specified team
+  const allGames = allWeekResults.flatMap(result => result.games);
+
+  const teamGames = allGames.filter(game =>
+    game.homeTeam.abbreviation === teamAbbreviation ||
+    game.awayTeam.abbreviation === teamAbbreviation
+  );
+
+  // Remove duplicates that might appear if a game is in multiple fetches (unlikely but safe)
+  const uniqueGames = Array.from(new Map(teamGames.map(game => [game.id, game])).values());
+
+  // Sort chronologically (earliest first)
+  uniqueGames.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  return {
+    games: uniqueGames,
+    lastUpdated: Date.now(),
+    isSnapshot: false
+  };
+}
+
 // Helper to determine if weather should be refetched based on game proximity
 const shouldRefetchWeather = (gameDate: string, lastFetchTime: number): boolean => {
   const now = Date.now();
@@ -436,12 +488,49 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
     const homeComp = competition.competitors.find((c: any) => c.homeAway === "home");
     const awayComp = competition.competitors.find((c: any) => c.homeAway === "away");
 
-    const getRecord = (comp: any) => comp.records?.[0]?.summary ?? "0-0";
+    let historicalGame: Game | undefined;
+    
+    // If records are missing (null or empty array), try fetching from scoreboard endpoint
+    const recordsMissing = (!homeComp.records || homeComp.records.length === 0) && (!awayComp.records || awayComp.records.length === 0);
+
+    if (recordsMissing) {
+         try {
+             // Pass explicit year and week from header to get point-in-time records
+             const { games } = await getGamesByWeek(data.header.week, data.header.season.type, false, data.header.season.year);
+             historicalGame = games.find(g => g.id === id);
+         } catch (err) {
+             console.warn("Failed to fetch historical game data for records:", err);
+         }
+    }
+
+    const getRecord = (comp: any, isHome: boolean) => {
+        if (comp.records && comp.records.length > 0) {
+            return comp.records[0].summary;
+        }
+
+        // Try historical game first (more accurate for past games)
+        if (historicalGame) {
+            return isHome ? historicalGame.homeTeam.record : historicalGame.awayTeam.record;
+        }
+        
+        // Fallback to standings (season-end records)
+        if (data.standings && data.standings.groups) {
+            for (const group of data.standings.groups) {
+                const entry = group.standings?.entries?.find((e: any) => e.id === comp.id);
+                if (entry) {
+                    const totalStat = entry.stats?.find((s: any) => s.type === 'total' || s.name === 'overall');
+                    if (totalStat?.summary) return totalStat.summary;
+                }
+            }
+        }
+        
+        return "0-0";
+    };
 
     const homeBranding = TEAM_BRANDING[homeComp.team.abbreviation as keyof typeof TEAM_BRANDING];
     const homeTeam: Team = {
       id: homeComp.team.id, name: homeComp.team.displayName, abbreviation: homeComp.team.abbreviation,
-      record: getRecord(homeComp), logoUrl: TEAM_LOGOS[homeComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+      record: getRecord(homeComp, true), logoUrl: TEAM_LOGOS[homeComp.team.abbreviation] || DEFAULT_NFL_LOGO,
       color: homeBranding?.primary || "#000000",
       colors: homeBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
       clinchedPlayoffs: false,
@@ -450,7 +539,7 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
     const awayBranding = TEAM_BRANDING[awayComp.team.abbreviation as keyof typeof TEAM_BRANDING];
     const awayTeam: Team = {
       id: awayComp.team.id, name: awayComp.team.displayName, abbreviation: awayComp.team.abbreviation,
-      record: getRecord(awayComp), logoUrl: TEAM_LOGOS[awayComp.team.abbreviation] || DEFAULT_NFL_LOGO,
+      record: getRecord(awayComp, false), logoUrl: TEAM_LOGOS[awayComp.team.abbreviation] || DEFAULT_NFL_LOGO,
       color: awayBranding?.primary || "#000000",
       colors: awayBranding?.colors || { primary: "#000000", lightAccent: "#000000", darkAccent: "#FFFFFF" },
       clinchedPlayoffs: false,
@@ -560,7 +649,10 @@ export async function getGameById(id: string, options: { fetchWeather?: boolean 
     }
 
     const game: Game = {
-      id: id, week: data.header.week, date: data.header.date || new Date().toISOString(),
+      id: id, week: data.header.week, season: data.header.season.year, seasonType: data.header.season.type,
+      displayClock: statusType.detail === 'Final' ? '0:00' : competition.status.displayClock,
+      period: competition.status.period,
+      date: data.header.date || new Date().toISOString(),
       venue: venue.fullName, venueLocation: `${venue.address?.city}, ${venue.address?.state}`,
       homeTeam, awayTeam, bookmakers, weather,
       broadcast: competition.broadcasts?.[0]?.names?.[0] ?? "",
@@ -586,6 +678,10 @@ export function getMockGames(week: number): Game[] {
     {
       id: "401671640",
       week: week,
+      season: 2025,
+      seasonType: 2,
+      displayClock: '0:00',
+      period: 0,
       date: new Date(Date.now() + 86400000).toISOString(),
       venue: "Highmark Stadium",
       venueLocation: "Orchard Park, NY",
@@ -649,6 +745,10 @@ export function getMockGames(week: number): Game[] {
     {
       id: "401671641",
       week: week,
+      season: 2025,
+      seasonType: 2,
+      displayClock: '0:00',
+      period: 0,
       date: new Date(Date.now() + 90000000).toISOString(),
       venue: "Lambeau Field",
       venueLocation: "Green Bay, WI",
