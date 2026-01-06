@@ -6,11 +6,10 @@ import { PlayoffConference, PlayoffPicture, PlayoffTeam } from "@/types/nfl";
 import { PlayoffMatchupCard } from "./PlayoffMatchupCard";
 import { SafeImage } from "../common/SafeImage";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { BracketView } from "./BracketView";
 import { ConferenceStandingsTable, SortConfig } from "./ConferenceStandingsTable";
 import { useSeason } from "@/context/SeasonContext";
 
-import { Info, List, Network } from "lucide-react";
+import { Info } from "lucide-react";
 
 const ClinchBadge = ({ status }: { status: PlayoffTeam['clinchStatus'] }) => {
   switch (status) {
@@ -164,14 +163,12 @@ const ConferencePlayoffView = ({ conference }: { conference: PlayoffConference }
     )
 }
 
-type ViewMode = 'STANDINGS' | 'BRACKET';
 type SortKey = keyof PlayoffTeam;
 
 export function PlayoffsTab() {
   const [playoffPicture, setPlayoffPicture] = useState<PlayoffPicture | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('STANDINGS');
   const { selectedSeason } = useSeason();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'seed', direction: 'asc' });
 
@@ -190,11 +187,6 @@ export function PlayoffsTab() {
         } finally {
             setIsLoading(false);
         }
-    }
-    
-    const savedView = localStorage.getItem('playoffViewMode') as ViewMode;
-    if (savedView) {
-        setViewMode(savedView);
     }
 
     fetchData();
@@ -248,11 +240,6 @@ export function PlayoffsTab() {
     setSortConfig({ key, direction });
   };
 
-  const toggleView = (mode: ViewMode) => {
-      setViewMode(mode);
-      localStorage.setItem('playoffViewMode', mode);
-  };
-
   if (isLoading) {
     return (
         <div className="flex justify-center items-center py-20">
@@ -271,47 +258,24 @@ export function PlayoffsTab() {
 
   return (
     <div className="space-y-8">
-        <div className="flex justify-end">
-            <div className="inline-flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                <button 
-                    onClick={() => toggleView('STANDINGS')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'STANDINGS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                    <List className="w-4 h-4" />
-                    List View
-                </button>
-                <button 
-                    onClick={() => toggleView('BRACKET')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'BRACKET' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                    <Network className="w-4 h-4" />
-                    Bracket
-                </button>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <ConferenceStandingsTable
+                conference="NFC"
+                teams={sortedNfcTeams}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+            />
+            <ConferenceStandingsTable
+                conference="AFC"
+                teams={sortedAfcTeams}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+            />
         </div>
-
-        {viewMode === 'STANDINGS' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <ConferenceStandingsTable
-                    conference="NFC"
-                    teams={sortedNfcTeams}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                />
-                <ConferenceStandingsTable
-                    conference="AFC"
-                    teams={sortedAfcTeams}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                />
-            </div>
-        ) : (
-            <BracketView playoffPicture={playoffPicture} />
-        )}
         
         <footer className="pt-12 border-t border-slate-200 text-center dark:border-slate-700">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed dark:text-slate-500">
-                Legend: * - Clinched Home-Field Advantage | z - Clinched Division | y - Clinched Wild Card | e - Eliminated
+                Legend: * - Clinched Home-Field Advantage | Z - Clinched Division | X - Clinched Playoff Berth | E - Eliminated
             </p>
         </footer>
     </div>

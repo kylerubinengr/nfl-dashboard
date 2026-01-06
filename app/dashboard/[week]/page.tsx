@@ -17,11 +17,24 @@ import { useGameTabs } from "@/context/GameTabsContext";
 import { useSeason } from "@/context/SeasonContext";
 import { Radio } from "lucide-react";
 
+// Map playoff week strings to ESPN week numbers
+const PLAYOFF_WEEK_MAP: Record<string, number> = {
+  'WC': 1,
+  'DIV': 2,
+  'CONF': 3,
+  'SB': 5,
+};
+
 export default function DashboardPage() {
   const params = useParams();
   const router = useRouter();
   const week = params.week as string;
-  const weekNum = parseInt(week);
+
+  // Check if it's a playoff week
+  const isPlayoffWeek = week in PLAYOFF_WEEK_MAP;
+  const weekNum = isPlayoffWeek ? PLAYOFF_WEEK_MAP[week] : parseInt(week);
+  const seasonType = isPlayoffWeek ? 3 : 2; // 3 for playoffs, 2 for regular season
+
   const { closeUnpinnedTabs } = useGameTabs();
   const { selectedSeason, setViewMode } = useSeason();
   const pathname = usePathname();
@@ -60,14 +73,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const maxWeeks = selectedSeason >= 2021 ? 18 : 17;
 
-    if (isNaN(weekNum) || weekNum < 1 || weekNum > maxWeeks) {
-      // For historical seasons, user asked to default to Week 1. 
-      // Also handles invalid weeks.
-      // If we are in 2025 and week > 18, it might mean playoffs or invalid, defaulting to max regular season week or 1 is safest.
-      // But standard "invalid url" behavior usually redirects to a safe default.
-      
-      const targetWeek = (selectedSeason < 2025 || weekNum > 18) ? 1 : 18;
-      router.push(`/dashboard/${targetWeek}`);
+    // Validate week parameter
+    if (!isPlayoffWeek && (isNaN(weekNum) || weekNum < 1 || weekNum > maxWeeks)) {
+      // Invalid regular season week - redirect to Week 1
+      router.push(`/dashboard/1`);
       return;
     }
 
@@ -75,7 +84,7 @@ export default function DashboardPage() {
       setIsLoading(true);
       try {
         // Initial fetch gets everything including odds
-        const result = await getGamesByWeek(weekNum, 2, false, selectedSeason);
+        const result = await getGamesByWeek(weekNum, seasonType, false, selectedSeason);
         setData(result);
       } catch (e) {
         console.error("Dashboard fetch failed", e);
@@ -85,7 +94,7 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, [weekNum, router, selectedSeason]);
+  }, [weekNum, seasonType, router, selectedSeason, isPlayoffWeek]);
 
   // Smart Polling Logic for Live Games
   useEffect(() => {
@@ -108,7 +117,7 @@ export default function DashboardPage() {
 
       try {
         // Fetch updates without hitting odds API
-        const result = await getGamesByWeek(weekNum, 2, false, selectedSeason);
+        const result = await getGamesByWeek(weekNum, seasonType, false, selectedSeason);
 
         // Merge new scores with existing odds/bookmakers
         setData(prevData => {
@@ -148,7 +157,7 @@ export default function DashboardPage() {
       console.log('[Dashboard] Cleaning up polling interval');
       clearInterval(intervalId);
     };
-  }, [data?.games, weekNum, selectedSeason]); // Depend on games to re-evaluate if we still need to poll
+  }, [data?.games, weekNum, seasonType, selectedSeason]); // Depend on games to re-evaluate if we still need to poll
 
   if (isLoading || !data) {
     return (
@@ -181,7 +190,7 @@ export default function DashboardPage() {
                 <SeasonSelector />
                 <ViewToggle />
              </div>
-             <WeekSelector currentWeek={weekNum} />
+             <WeekSelector currentWeek={isPlayoffWeek ? week : weekNum} />
           </div>
         </div>
 
@@ -189,7 +198,9 @@ export default function DashboardPage() {
 
         {data.games.length === 0 ? (
              <div className="text-center py-16">
-                <p className="text-slate-500">No games scheduled for Week {weekNum}.</p>
+                <p className="text-slate-500 dark:text-slate-400">
+                  No games scheduled for {isPlayoffWeek ? week : `Week ${weekNum}`}.
+                </p>
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

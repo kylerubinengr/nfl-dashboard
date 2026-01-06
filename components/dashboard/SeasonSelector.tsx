@@ -15,6 +15,12 @@ export function SeasonSelector() {
     const newSeason = parseInt(e.target.value);
     setSelectedSeason(newSeason);
 
+    // If on Standings view, stay on Standings
+    if (pathname === '/dashboard/playoffs') {
+      router.push('/dashboard/playoffs');
+      return;
+    }
+
     // Specific logic for Dashboard view redirection
     if (pathname === '/' || pathname.startsWith('/dashboard')) {
       if (newSeason < 2025) {

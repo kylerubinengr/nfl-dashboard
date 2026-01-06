@@ -229,3 +229,37 @@ export type Game = {
   bettingResult?: BettingResult;
   drives?: Drive[];
 };
+
+// Playoff Bracket Types
+export type PlayoffRound =
+  | 'WILD_CARD'    // Week 1
+  | 'DIVISIONAL'   // Week 2
+  | 'CHAMPIONSHIP' // Week 3
+  | 'SUPER_BOWL';  // Week 5
+
+export type BracketGame = {
+  id: string | null;           // null for TBD games
+  game?: Game;                 // Actual ESPN game if available
+  round: PlayoffRound;
+  position: number;            // 0-2 for Wild Card, 0-1 for Divisional, etc.
+  homeTeam?: Team | PlayoffTeam;
+  awayTeam?: Team | PlayoffTeam;
+  homeSeed?: number;
+  awaySeed?: number;
+  status: 'TBD' | 'SCHEDULED' | 'LIVE' | 'FINAL';
+  winnerId?: string;
+  advancesTo?: string;         // Game ID of next round
+  isByeWeek?: boolean;
+};
+
+export type BracketRoundData = {
+  round: PlayoffRound;
+  week: number;                // ESPN week (1-5)
+  games: BracketGame[];
+};
+
+export type BracketStructure = {
+  conference: 'AFC' | 'NFC';
+  rounds: BracketRoundData[];
+  lastUpdated: number;
+};

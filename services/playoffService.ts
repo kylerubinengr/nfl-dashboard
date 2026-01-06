@@ -86,8 +86,8 @@ export async function getPlayoffPicture(year: number = 2025): Promise<PlayoffPic
           let clinchStatus: PlayoffTeam['clinchStatus'] = 'NONE';
 
           if (clincher === '*') clinchStatus = 'CLINCHED_HOMEFIELD';
-          else if (clincher === 'z' || clincher === 'y') clinchStatus = 'CLINCHED_DIVISION';
-          else if (clincher === 'x') clinchStatus = 'CLINCHED_PLAYOFF';
+          else if (clincher === 'z') clinchStatus = 'CLINCHED_DIVISION';
+          else if (clincher === 'y' || clincher === 'x') clinchStatus = 'CLINCHED_PLAYOFF';
           else if (clincher === 'e') clinchStatus = 'ELIMINATED';
 
           const wins = getStat('wins') || "0";
