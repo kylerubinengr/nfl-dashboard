@@ -59,19 +59,14 @@ export async function getGamesByWeek(
   const oddsUrl = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=spreads,totals,h2h&apiKey=${process.env.NEXT_PUBLIC_ODDS_API_KEY}`;
 
   try {
-    if (
-      !process.env.NEXT_PUBLIC_ODDS_API_KEY ||
-      process.env.NEXT_PUBLIC_ODDS_API_KEY === "YOUR_API_KEY" ||
-      !process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY ||
-      process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY === "YOUR_API_KEY"
-    ) {
-      console.warn("API keys not found. Using mock data.");
-      return { games: sortGames(getMockGames(week)), isSnapshot: false, lastUpdated: Date.now() };
-    }
+    // ESPN API is public and doesn't require a key
+    // Only skip odds fetching if that specific key is missing
+    const hasOddsKey = process.env.NEXT_PUBLIC_ODDS_API_KEY &&
+                       process.env.NEXT_PUBLIC_ODDS_API_KEY !== "YOUR_API_KEY";
 
     const [espnData, oddsData] = await Promise.all([
       fetch(espnUrl).then(res => res.ok ? res.json() : null).catch(() => null),
-      fetchOdds ? fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []) : Promise.resolve([])
+      (fetchOdds && hasOddsKey) ? fetch(oddsUrl).then(res => res.ok ? res.json() : []).catch(() => []) : Promise.resolve([])
     ]);
 
     if (!espnData?.events) {
