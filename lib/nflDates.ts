@@ -111,6 +111,7 @@ export async function fetchCurrentNFLWeek(): Promise<CurrentWeekInfo> {
     if (fallback === 'playoffs') {
       return { route: 'WC', slug: 'wild-card', seasonType: 3, week: 1, season: 2026 };
     }
-    return { route: String(fallback), slug: `week-${fallback}`, seasonType: 2, week: fallback, season: 2026 };
+    const weekNum = fallback ?? 1;
+    return { route: String(weekNum), slug: `week-${weekNum}`, seasonType: 2, week: weekNum, season: 2026 };
   }
 }
