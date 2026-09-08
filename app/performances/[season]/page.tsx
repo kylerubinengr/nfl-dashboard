@@ -113,7 +113,15 @@ export default function PerformancesPage() {
           </div>
         )}
 
-        {!loading && !error && (
+        {!loading && !error && performances.length === 0 && (
+          <div className="text-center py-20">
+            <p className="text-slate-500 dark:text-slate-400">
+              No games have been played yet in the {seasonParam} season.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && performances.length > 0 && (
           <PerformancesTable performances={performances} />
         )}
       </div>

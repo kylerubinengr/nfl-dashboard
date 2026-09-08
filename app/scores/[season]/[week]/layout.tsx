@@ -6,7 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ season: s
   const weekNum = week.replace(/^week-/, '');
   const weekLabel = isPlayoffSlug(week) ? getPlayoffFullName(week) : `Week ${weekNum}`;
   return {
-    title: `${season} ${weekLabel} Scores`,
+    title: `${season} ${weekLabel}`,
     description: `NFL scores for ${weekLabel} of the ${season} season.`,
   };
 }

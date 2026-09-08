@@ -126,6 +126,15 @@ export async function GET(request: Request) {
     );
   }
 
+  // nflverse PBP data won't exist for the current or future seasons until games are played
+  const currentYear = new Date().getFullYear();
+  if (seasonNum >= currentYear) {
+    return NextResponse.json(
+      { season: seasonNum, performances: [], noData: true },
+      { headers: { 'Cache-Control': 'public, s-maxage=3600' } }
+    );
+  }
+
   // Check in-memory cache
   const cached = resultCache.get(seasonNum);
   if (cached) {

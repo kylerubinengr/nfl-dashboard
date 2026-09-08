@@ -638,9 +638,11 @@ async function getESPNStandings(season?: number): Promise<ESPNStandingsResult> {
         });
     });
 
-    const pfRanks = calculateRanks(pfVals, false); // Higher better
-    const paRanks = calculateRanks(paVals, true);  // Lower better
-    const diffRanks = calculateRanks(diffVals, false); // Higher better
+    // Don't rank when no games have been played (all values are 0)
+    const hasGamesPlayed = Object.values(pfVals).some(v => v !== 0);
+    const pfRanks = hasGamesPlayed ? calculateRanks(pfVals, false) : {};
+    const paRanks = hasGamesPlayed ? calculateRanks(paVals, true) : {};
+    const diffRanks = hasGamesPlayed ? calculateRanks(diffVals, false) : {};
 
     // Compute league context for ESPN stats
     // ESPN uses team IDs as keys; we need to map to abbreviations for display
