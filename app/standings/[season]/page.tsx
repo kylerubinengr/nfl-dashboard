@@ -18,7 +18,7 @@ export default function StandingsPage() {
 
   // Sync season from URL to context (only when URL param changes)
   useEffect(() => {
-    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2025) {
+    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2026) {
       setSelectedSeason(seasonParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -26,8 +26,8 @@ export default function StandingsPage() {
 
   // Validate season param
   useEffect(() => {
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) {
-      router.push(buildStandingsUrl(2025));
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) {
+      router.push(buildStandingsUrl(2026));
     }
   }, [seasonParam, router]);
 

@@ -13,7 +13,7 @@ export async function getNflFastRStats(homeId: string, awayId: string) {
     const csvText = await response.text();
     const parsed = Papa.parse(csvText, { header: true, dynamicTyping: true });
     // Assuming 2024 is the target season as per prior logic
-    const latestSeason = parsed.data.filter((row: any) => row.season === 2024);
+    const latestSeason = parsed.data.filter((row: any) => row.season === 2026);
 
     const homeAbbr = getTeamByEspnId(homeId)?.nflfastrAbbr;
     const awayAbbr = getTeamByEspnId(awayId)?.nflfastrAbbr;

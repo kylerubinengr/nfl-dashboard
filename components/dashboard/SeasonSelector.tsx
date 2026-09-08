@@ -12,13 +12,13 @@ import {
 } from "@/lib/routes";
 
 // The most recent season with NFL data
-const CURRENT_SEASON = 2025;
+const CURRENT_SEASON = 2026;
 
 export function SeasonSelector() {
   const router = useRouter();
   const pathname = usePathname();
   const { selectedSeason, setSelectedSeason } = useSeason();
-  const availableSeasons = [2025, 2024, 2023, 2022, 2021, 2020];
+  const availableSeasons = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
   const handleSeasonChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSeason = parseInt(e.target.value);

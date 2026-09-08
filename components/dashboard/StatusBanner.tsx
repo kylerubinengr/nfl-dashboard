@@ -5,10 +5,11 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 interface StatusBannerProps {
   isSnapshot: boolean;
   lastUpdated?: number;
+  hasLiveGames?: boolean;
 }
 
-export function StatusBanner({ isSnapshot, lastUpdated }: StatusBannerProps) {
-  const timeString = lastUpdated 
+export function StatusBanner({ isSnapshot, lastUpdated, hasLiveGames }: StatusBannerProps) {
+  const timeString = lastUpdated
     ? new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : 'Unknown';
 
@@ -22,6 +23,8 @@ export function StatusBanner({ isSnapshot, lastUpdated }: StatusBannerProps) {
       </div>
     );
   }
+
+  if (!hasLiveGames) return null;
 
   return (
     <div className="mb-4 flex items-center gap-2 text-green-600 text-[11px] px-1 dark:text-green-400">

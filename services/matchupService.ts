@@ -487,7 +487,14 @@ async function getAdvancedStats(season?: number): Promise<AdvancedStatsResult> {
 
     return result;
   } catch (error) {
-    console.warn(`[advancedStats] PBP fetch failed for ${seasonYear}, falling back to static JSON:`, error);
+    console.warn(`[advancedStats] PBP fetch failed for ${seasonYear}:`, error);
+    // Only fall back to static JSON for past seasons — for the current/future
+    // season where PBP data doesn't exist yet, return empty results so the UI
+    // shows N/A instead of stale data from a prior season.
+    const currentYear = new Date().getFullYear();
+    if (seasonYear >= currentYear) {
+      return { teams: {}, leagueContext: {} };
+    }
     return getAdvancedStatsFromFile();
   }
 }
@@ -599,8 +606,8 @@ type ESPNStandingsResult = {
 async function getESPNStandings(season?: number): Promise<ESPNStandingsResult> {
   try {
     const url = season
-      ? `https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}`
-      : "https://site.api.espn.com/apis/v2/sports/football/nfl/standings";
+      ? `https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}&seasontype=2`
+      : "https://site.api.espn.com/apis/v2/sports/football/nfl/standings?seasontype=2";
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) return { teams: {}, leagueContext: {} };
     const data = await res.json();

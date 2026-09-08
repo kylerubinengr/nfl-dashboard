@@ -32,7 +32,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | string }) 
   const weeks = Array.from({ length: totalWeeks }, (_, i) => i + 1);
 
   const activeNFLWeek = getCurrentNFLWeek();
-  const isCurrentSeason = selectedSeason === 2025;
+  const isCurrentSeason = selectedSeason === 2026;
 
   // Determine if current view is a playoff week
   const isPlayoffWeek = typeof currentWeek === 'string' && isPlayoffSlug(currentWeek);
@@ -110,7 +110,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | string }) 
             {/* Regular Season Weeks */}
             {weeks.map((week) => (
               <option key={week} value={week}>
-                Week {week}{week === activeNFLWeek && selectedSeason === 2025 ? ' (Live)' : ''}
+                Week {week}{week === activeNFLWeek && selectedSeason === 2026 ? ' (Live)' : ''}
               </option>
             ))}
 
@@ -150,7 +150,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | string }) 
             }`}
           >
             {week}
-            {week === activeNFLWeek && selectedSeason === 2025 && (
+            {week === activeNFLWeek && selectedSeason === 2026 && (
               <span className="absolute top-0 right-0 flex h-2 w-2 z-10">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>

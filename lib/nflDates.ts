@@ -1,6 +1,6 @@
 /**
- * NFL Season 2025-2026 Dates
- * Season starts: Thursday, September 4, 2025
+ * NFL Season 2026-2027 Dates
+ * Season starts: Wednesday, September 9, 2026
  * Rollover: Every Tuesday at 6:00 AM local (Eastern used as NFL standard)
  */
 
@@ -8,12 +8,20 @@
  * Synchronous fallback for current NFL week based on hardcoded rollover dates.
  * Use fetchCurrentNFLWeek() for accurate results from ESPN API.
  */
-export function getCurrentNFLWeek(): number | 'playoffs' {
+export function getCurrentNFLWeek(): number | 'playoffs' | null {
   const now = Date.now();
 
+  // Season starts Wednesday, September 9, 2026
+  const SEASON_START = new Date('2026-09-09T00:00:00-04:00').getTime();
+
+  // Before the season starts, no week is "live"
+  if (now < SEASON_START) {
+    return null;
+  }
+
   // Week 1 Rollover (Tuesday after Week 1 starts)
-  // September 9, 2025, 06:00:00 AM EDT (UTC-4)
-  const WEEK_1_ROLLOVER = new Date('2025-09-09T06:00:00-04:00').getTime();
+  // September 15, 2026, 06:00:00 AM EDT (UTC-4)
+  const WEEK_1_ROLLOVER = new Date('2026-09-15T06:00:00-04:00').getTime();
   const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
   const weeksSinceFirstRollover = Math.floor((now - WEEK_1_ROLLOVER) / MS_PER_WEEK);
@@ -51,7 +59,7 @@ export interface CurrentWeekInfo {
   seasonType: number;
   /** ESPN week number */
   week: number;
-  /** NFL season year (e.g. 2025) */
+  /** NFL season year (e.g. 2026) */
   season: number;
 }
 
@@ -81,7 +89,12 @@ export async function fetchCurrentNFLWeek(): Promise<CurrentWeekInfo> {
     const data = await res.json();
     const seasonType: number = data.season?.type ?? 2;
     const week: number = data.week?.number ?? 1;
-    const season: number = data.season?.year ?? 2025;
+    const season: number = data.season?.year ?? 2026;
+
+    if (seasonType === 1) {
+      // Preseason — show regular season Week 1
+      return { route: '1', slug: 'week-1', seasonType: 2, week: 1, season };
+    }
 
     if (seasonType === 3) {
       // Playoffs — map ESPN week to dashboard route
@@ -96,8 +109,8 @@ export async function fetchCurrentNFLWeek(): Promise<CurrentWeekInfo> {
     // Fallback to time-based calculation
     const fallback = getCurrentNFLWeek();
     if (fallback === 'playoffs') {
-      return { route: 'WC', slug: 'wild-card', seasonType: 3, week: 1, season: 2025 };
+      return { route: 'WC', slug: 'wild-card', seasonType: 3, week: 1, season: 2026 };
     }
-    return { route: String(fallback), slug: `week-${fallback}`, seasonType: 2, week: fallback, season: 2025 };
+    return { route: String(fallback), slug: `week-${fallback}`, seasonType: 2, week: fallback, season: 2026 };
   }
 }

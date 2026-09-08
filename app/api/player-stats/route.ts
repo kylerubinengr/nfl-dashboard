@@ -349,7 +349,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search');
   const slug = searchParams.get('slug');
-  const season = parseInt(searchParams.get('season') || '2025');
+  const season = parseInt(searchParams.get('season') || '2026');
 
   if (!search && !slug) {
     return NextResponse.json({ error: 'Either "search" or "slug" query parameter is required' }, { status: 400 });

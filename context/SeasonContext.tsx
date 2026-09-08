@@ -19,8 +19,8 @@ interface SeasonContextType {
 const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
-  // Default to 2025
-  const [selectedSeason, setSelectedSeasonState] = useState<number>(2025);
+  // Default to 2026
+  const [selectedSeason, setSelectedSeasonState] = useState<number>(2026);
   // Default to Week view
   const [viewMode, setViewModeState] = useState<ViewMode>({ type: 'WEEK', href: '/' });
 
@@ -29,7 +29,7 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     const savedSeason = localStorage.getItem("nfl_dashboard_season");
     if (savedSeason) {
       const year = parseInt(savedSeason);
-      if (!isNaN(year) && year >= 2020 && year <= 2025) {
+      if (!isNaN(year) && year >= 2020 && year <= 2026) {
         setSelectedSeasonState(year);
       }
     }

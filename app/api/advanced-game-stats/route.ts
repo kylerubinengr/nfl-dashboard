@@ -14,10 +14,20 @@ function mapAbbreviation(abbr: string): string {
   return ABBR_MAP[abbr] || abbr;
 }
 
+// ESPN playoff week → nflverse week
+// ESPN uses weeks 1-5 for playoffs; nflverse uses 19-22
+const ESPN_PLAYOFF_TO_NFLVERSE: Record<number, number> = {
+  1: 19,  // Wild Card
+  2: 20,  // Divisional
+  3: 21,  // Conference Championship
+  4: 22,  // Super Bowl
+  5: 22,  // Super Bowl (ESPN sometimes uses week 5)
+};
+
 function buildGameId(season: number, week: number, seasonType: number, away: string, home: string): string {
-  // ESPN uses seasonType=3 for playoffs with weeks 1-5
-  // nflfastR uses weeks 19-22+ for playoffs (18 + ESPN week)
-  const nflverseWeek = seasonType === 3 ? 18 + week : week;
+  const nflverseWeek = seasonType === 3
+    ? (ESPN_PLAYOFF_TO_NFLVERSE[week] ?? 18 + week)
+    : week;
   const weekStr = nflverseWeek.toString().padStart(2, '0');
   return `${season}_${weekStr}_${mapAbbreviation(away)}_${mapAbbreviation(home)}`;
 }

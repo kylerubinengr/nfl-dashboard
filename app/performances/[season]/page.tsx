@@ -24,7 +24,7 @@ export default function PerformancesPage() {
   // Sync season from URL to context
   // Sync season from URL to context (only when URL param changes)
   useEffect(() => {
-    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2025) {
+    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2026) {
       setSelectedSeason(seasonParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,8 +32,8 @@ export default function PerformancesPage() {
 
   // Validate season param
   useEffect(() => {
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) {
-      router.push(buildPerformancesUrl(2025));
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) {
+      router.push(buildPerformancesUrl(2026));
     }
   }, [seasonParam, router]);
 
@@ -44,7 +44,7 @@ export default function PerformancesPage() {
 
   // Fetch performances using URL season param
   useEffect(() => {
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) return;
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) return;
 
     let cancelled = false;
     setLoading(true);

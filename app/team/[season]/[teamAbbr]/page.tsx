@@ -29,7 +29,7 @@ export default function TeamPage() {
 
   // Sync season from URL to context (only when URL param changes)
   useEffect(() => {
-    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2025) {
+    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2026) {
       setSelectedSeason(seasonParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,8 +49,8 @@ export default function TeamPage() {
 
   // Validate params
   useEffect(() => {
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) {
-      router.push(buildTeamUrl(2025, teamAbbr || "BUF"));
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) {
+      router.push(buildTeamUrl(2026, teamAbbr || "BUF"));
       return;
     }
     if (!teamAbbr || !TEAM_NAMES[teamAbbr]) {
@@ -62,7 +62,7 @@ export default function TeamPage() {
   // Fetch team games using URL season
   useEffect(() => {
     if (!teamAbbr || !TEAM_NAMES[teamAbbr]) return;
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) return;
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) return;
 
     async function fetchData() {
       setIsLoading(true);
@@ -111,7 +111,7 @@ export default function TeamPage() {
 
         <TeamStatsCards teamAbbr={teamAbbr} season={seasonParam} />
 
-        <StatusBanner isSnapshot={data.isSnapshot} lastUpdated={data.lastUpdated} />
+        <StatusBanner isSnapshot={data.isSnapshot} lastUpdated={data.lastUpdated} hasLiveGames={data.games.some(g => g.isLive)} />
 
         {data.games.length === 0 ? (
           <div className="text-center py-16">

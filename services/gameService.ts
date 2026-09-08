@@ -20,7 +20,7 @@ const sortGames = (games: Game[]) => {
 export async function getGamesByWeek(
   week: number = 17,
   seasonType: number = 2,
-  year: number = 2025
+  year: number = 2026
 ): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
   // Use provided year for weeks 1-18 (Regular Season).
   const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${year}&seasontype=${seasonType}&week=${week}`;
@@ -147,7 +147,7 @@ export async function getGamesByWeek(
  */
 export async function getGamesByTeam(
   teamAbbreviation: string,
-  year: number = 2025
+  year: number = 2026
 ): Promise<{ games: Game[]; lastUpdated?: number; isSnapshot: boolean }> {
   // Determine max weeks based on season for regular season
   const maxRegularWeeks = year >= 2021 ? 18 : 17;
@@ -529,7 +529,7 @@ export function getMockGames(week: number): Game[] {
     {
       id: "401671640",
       week: week,
-      season: 2025,
+      season: 2026,
       seasonType: 2,
       displayClock: '0:00',
       period: 0,
@@ -582,7 +582,7 @@ export function getMockGames(week: number): Game[] {
     {
       id: "401671641",
       week: week,
-      season: 2025,
+      season: 2026,
       seasonType: 2,
       displayClock: '0:00',
       period: 0,

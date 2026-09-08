@@ -11,7 +11,7 @@ const octokit = new Octokit({
 
 async function getLatestStatsUrl() {
   const TARGET_TAG = 'stats_team';
-  const TARGET_FILENAME = 'stats_team_week_2025.csv'; // Based on your last request
+  const TARGET_FILENAME = 'stats_team_week_2026.csv';
 
   try {
     console.log(`[API Route] Attempting to get release by tag: ${TARGET_TAG}...`);
@@ -116,8 +116,8 @@ export async function GET(request: Request) {
     
     // Determine target season based on filename or default to 2024
     let targetSeason = 2024; // Default
-    if (url.includes('stats_team_week_2025.csv')) {
-        targetSeason = 2025;
+    if (url.includes('stats_team_week_2026.csv')) {
+        targetSeason = 2026;
     } else {
         const match = url.match(/_(\d{4})\.csv$/);
         if (match) {

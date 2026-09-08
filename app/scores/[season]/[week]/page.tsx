@@ -38,7 +38,7 @@ export default function ScoresPage() {
 
   // Sync season from URL to context (only when URL param changes)
   useEffect(() => {
-    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2025) {
+    if (!isNaN(seasonParam) && seasonParam >= 2020 && seasonParam <= 2026) {
       setSelectedSeason(seasonParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,8 +76,8 @@ export default function ScoresPage() {
 
   // Validate params and redirect if invalid
   useEffect(() => {
-    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2025) {
-      router.push(buildScoresUrl(2025, 1));
+    if (isNaN(seasonParam) || seasonParam < 2020 || seasonParam > 2026) {
+      router.push(buildScoresUrl(2026, 1));
       return;
     }
     if (!isValidWeek) {
@@ -192,7 +192,7 @@ export default function ScoresPage() {
           </div>
         </div>
 
-        <StatusBanner isSnapshot={data.isSnapshot} lastUpdated={data.lastUpdated} />
+        <StatusBanner isSnapshot={data.isSnapshot} lastUpdated={data.lastUpdated} hasLiveGames={isLive} />
 
         {data.games.length === 0 ? (
              <div className="text-center py-12 sm:py-16">
