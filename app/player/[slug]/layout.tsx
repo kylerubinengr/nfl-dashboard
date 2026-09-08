@@ -7,7 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
   return {
-    title: `${playerName} Stats | Score Boxes`,
+    title: `${playerName} Stats`,
     description: `NFL stats and game log for ${playerName}.`,
   };
 }

@@ -3,9 +3,10 @@ import { isPlayoffSlug, getPlayoffFullName } from "@/lib/routes";
 
 export async function generateMetadata({ params }: { params: Promise<{ season: string; week: string }> }): Promise<Metadata> {
   const { season, week } = await params;
-  const weekLabel = isPlayoffSlug(week) ? getPlayoffFullName(week) : `Week ${week}`;
+  const weekNum = week.replace(/^week-/, '');
+  const weekLabel = isPlayoffSlug(week) ? getPlayoffFullName(week) : `Week ${weekNum}`;
   return {
-    title: `${weekLabel}, ${season} Scores | Score Boxes`,
+    title: `${season} ${weekLabel} Scores`,
     description: `NFL scores for ${weekLabel} of the ${season} season.`,
   };
 }

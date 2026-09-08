@@ -46,25 +46,34 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | string }) 
         return;
       }
 
-      // For current season, check completion status sequentially
-      const unlocked: string[] = ["wild-card"]; // WC always unlocked
+      // For current season, unlock each playoff round only after the prior round completes
+      const unlocked: string[] = [];
 
       try {
-        // Check if Wild Card (week 1) is complete
+        // WC unlocks after Week 18 (last regular season week) is complete
+        const lastRegWeek = selectedSeason >= 2021 ? 18 : 17;
+        const { games: lastWeekGames } = await getGamesByWeek(lastRegWeek, 2, selectedSeason);
+        const lastWeekComplete = lastWeekGames.length > 0 && lastWeekGames.every(g => g.status === 'post');
+
+        if (!lastWeekComplete) {
+          setUnlockedPlayoffWeeks(unlocked);
+          return;
+        }
+
+        unlocked.push("wild-card");
+
         const { games: wcGames } = await getGamesByWeek(1, 3, selectedSeason);
         const wcComplete = wcGames.length > 0 && wcGames.every(g => g.status === 'post');
 
         if (wcComplete) {
           unlocked.push("divisional");
 
-          // Only check Divisional if Wild Card is complete
           const { games: divGames } = await getGamesByWeek(2, 3, selectedSeason);
           const divComplete = divGames.length > 0 && divGames.every(g => g.status === 'post');
 
           if (divComplete) {
             unlocked.push("conference");
 
-            // Only check Conference if Divisional is complete
             const { games: confGames } = await getGamesByWeek(3, 3, selectedSeason);
             const confComplete = confGames.length > 0 && confGames.every(g => g.status === 'post');
 

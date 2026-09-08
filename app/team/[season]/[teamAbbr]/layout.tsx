@@ -6,7 +6,7 @@ export async function generateMetadata({ params }: { params: Promise<{ season: s
   const abbr = teamAbbr.toUpperCase();
   const teamName = TEAM_NAMES[abbr] || abbr;
   return {
-    title: `${teamName} ${season} Stats | Score Boxes`,
+    title: `${teamName} ${season} Stats`,
     description: `${teamName} game results, stats, and schedule for the ${season} NFL season.`,
   };
 }

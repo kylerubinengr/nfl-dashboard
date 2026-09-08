@@ -6,7 +6,10 @@ import { SeasonProvider } from "@/context/SeasonContext";
 import { Navbar } from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
-  title: "Score Boxes",
+  title: {
+    default: "Score Boxes",
+    template: "%s | Score Boxes",
+  },
   description: "Real-time NFL scores, standings, and game tracking",
 };
 

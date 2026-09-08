@@ -120,6 +120,12 @@ const ADVANCED_STATS_TTL = 3600 * 1000; // 1 hour in ms
 async function getAdvancedStats(season?: number): Promise<AdvancedStatsResult> {
   const seasonYear = season || new Date().getFullYear();
 
+  // nflverse PBP data won't exist for the current or future seasons until games are played
+  const currentYear = new Date().getFullYear();
+  if (seasonYear >= currentYear) {
+    return { teams: {}, leagueContext: {} };
+  }
+
   // Check in-memory cache
   const cached = advancedStatsCache.get(seasonYear);
   if (cached && (Date.now() - cached.timestamp) < ADVANCED_STATS_TTL) {

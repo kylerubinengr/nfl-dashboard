@@ -15,9 +15,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const game = await getGameById(id);
   if (!game) {
-    return { title: "Game Not Found | Score Boxes" };
+    return { title: "Game Not Found" };
   }
-  const title = `${game.awayTeam.abbreviation} vs ${game.homeTeam.abbreviation} — Week ${game.week} | Score Boxes`;
+  const title = `${game.awayTeam.abbreviation} vs ${game.homeTeam.abbreviation} — Week ${game.week}`;
   const description = `${game.awayTeam.name} at ${game.homeTeam.name}, Week ${game.week} ${game.season} NFL season.`;
   return { title, description };
 }
